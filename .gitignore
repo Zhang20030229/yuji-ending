@@ -1,0 +1,54 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Node
+node_modules/
+dist/
+.vite/
+.playwright-cli/
+
+# IDE
+.vs/
+*.swp
+*.swo
+
+# Logs
+*.log
+artifacts/
+.runtime/
+
+# Local private runtime data
+private-assets/
+data-protection-keys/
+backend/src/Echora.Api/Attachments/
+
+# Environment
+.env
+.env.local
+.env.*.local
+appsettings.*.Local.json
+appsettings.Production.json
+
+# Reference code (not part of the project)
+ref/
+tasks/
+tmp/
+.playwright-cli/
+.cursor/
+.agents/
+.codex/
+design-system/
+docs/
+!docs/
+docs/*
+!docs/0.4/
+!docs/0.4/**
+images/
+AGENTS.md
+
+# OS
+Thumbs.db
+.DS_Store

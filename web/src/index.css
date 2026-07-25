@@ -1,0 +1,449 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* 遇己暖象牙主题：只改变视觉令牌，不参与任何业务状态。 */
+  --background: #f8f4ea;
+  --foreground: #292b28;
+  --canvas: #eee9de;
+  --card: #fffdf7;
+  --card-foreground: #292b28;
+  --popover: #fffdf7;
+  --popover-foreground: #292b28;
+  --primary: #267b73;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e6f0eb;
+  --secondary: #f0eadf;
+  --secondary-foreground: #292b28;
+  --muted: #f0eadf;
+  --muted-foreground: #75746d;
+  --accent: #faead5;
+  --accent-foreground: #8a4b12;
+  --destructive: #a45545;
+  --border: #e7dfd1;
+  --input: #d8cfc0;
+  --ring: #267b73;
+  --evidence: #4f7772;
+  --success: #4c7d55;
+  --success-soft: #edf6f2;
+  --glass: rgba(255, 253, 247, 0.66);
+  --glass-strong: rgba(255, 253, 247, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.78);
+  --shadow-card: 0 2px 10px rgba(88, 76, 47, 0.045);
+  --shadow-floating: 0 8px 24px rgba(76, 69, 47, 0.09);
+  --radius: 12px;
+  --mobile-nav-height: 64px;
+  --mobile-nav-bottom: max(8px, env(safe-area-inset-bottom));
+  --mobile-nav-clearance: calc(var(--mobile-nav-height) + var(--mobile-nav-bottom));
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-evidence: var(--evidence);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-width: 320px;
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    color: var(--foreground);
+    background: var(--canvas);
+    font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  button:not(:disabled),
+  a[href] {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .yuji-shell {
+    background:
+      radial-gradient(circle at 85% 0%, rgba(205, 115, 28, 0.09), transparent 28rem),
+      radial-gradient(circle at 0% 55%, rgba(38, 123, 115, 0.08), transparent 30rem),
+      var(--canvas);
+  }
+
+  .yuji-sidebar {
+    border-color: var(--border);
+    background:
+      radial-gradient(circle at 50% 0%, rgba(230, 240, 235, 0.9), transparent 15rem),
+      color-mix(in srgb, var(--card) 88%, var(--background));
+    box-shadow: 8px 0 28px rgba(76, 69, 47, 0.035);
+  }
+
+  .yuji-brand-mark {
+    display: block;
+    object-fit: cover;
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-nav-item {
+    border-radius: 16px;
+  }
+
+  .yuji-nav-item:hover {
+    background: color-mix(in srgb, var(--primary-soft) 68%, transparent);
+    color: var(--primary);
+  }
+
+  .yuji-account {
+    border-color: var(--border);
+  }
+
+  .yuji-mobile-nav {
+    bottom: var(--mobile-nav-bottom);
+    pointer-events: none;
+    background: transparent;
+  }
+
+  .yuji-mobile-nav__surface {
+    pointer-events: auto;
+    border-color: var(--glass-border);
+    background: var(--glass);
+    box-shadow: 0 10px 30px rgba(76, 69, 47, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  }
+
+  .yuji-mobile-tab {
+    border-radius: 18px;
+  }
+
+  .yuji-access {
+    background: var(--background);
+  }
+
+  .yuji-access__decor {
+    background:
+      radial-gradient(circle at 16% 18%, rgba(205, 115, 28, 0.16), transparent 13rem),
+      radial-gradient(circle at 78% 72%, rgba(38, 123, 115, 0.18), transparent 18rem),
+      linear-gradient(145deg, #e9e2d3 0%, #f5efe3 48%, #e6eee7 100%);
+  }
+
+  .yuji-access__decor::before,
+  .yuji-access__decor::after {
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 999px;
+    background: rgba(255, 253, 247, 0.28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    content: "";
+    pointer-events: none;
+  }
+
+  .yuji-access__decor::before {
+    width: 21rem;
+    height: 21rem;
+    right: -7rem;
+    top: -5rem;
+  }
+
+  .yuji-access__decor::after {
+    width: 15rem;
+    height: 15rem;
+    left: -5rem;
+    bottom: -4rem;
+  }
+
+  .yuji-access__decor > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .yuji-access__panel {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(230, 240, 235, 0.66), transparent 24rem),
+      var(--background);
+  }
+
+  .yuji-access__form form {
+    padding: 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    box-shadow: var(--shadow-floating);
+  }
+
+  .yuji-access__heading h1 {
+    color: var(--foreground);
+  }
+
+  @media (max-width: 767px) {
+    .yuji-access__form form {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+  }
+
+  .yuji-chat {
+    background:
+      radial-gradient(circle at 92% 4%, rgba(205, 115, 28, 0.1), transparent 24rem),
+      radial-gradient(circle at 5% 48%, rgba(38, 123, 115, 0.07), transparent 28rem),
+      var(--background);
+  }
+
+  .yuji-session-rail {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--card) 78%, var(--background));
+  }
+
+  .yuji-chat-header {
+    z-index: 5;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+    background: rgba(248, 244, 234, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .yuji-inline-error {
+    border: 1px solid color-mix(in srgb, var(--destructive) 18%, transparent);
+    background: color-mix(in srgb, var(--card) 86%, #fff0ed);
+  }
+
+  .yuji-thread,
+  .yuji-thread-viewport {
+    background: transparent;
+  }
+
+  .yuji-thread-content {
+    padding-bottom: 2rem;
+  }
+
+  .yuji-owner-bubble {
+    box-shadow: 0 5px 16px rgba(38, 123, 115, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .yuji-assistant-bubble {
+    padding: 0.75rem 0.875rem;
+    border: 1px solid rgba(61, 85, 77, 0.07);
+    border-radius: 18px 18px 18px 6px;
+    background: rgba(255, 253, 247, 0.7);
+    box-shadow: 0 4px 14px rgba(45, 70, 61, 0.045);
+  }
+
+  .yuji-message time {
+    margin-inline: 0.35rem;
+  }
+
+  .yuji-thread-footer {
+    padding-bottom: calc(var(--mobile-nav-clearance) + 12px);
+    background: linear-gradient(transparent, var(--background) 28%);
+  }
+
+  .yuji-composer {
+    border-color: rgba(61, 85, 77, 0.11);
+    background: rgba(255, 253, 247, 0.82);
+    box-shadow: var(--shadow-floating), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(1.35);
+    -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  }
+
+  @media (min-width: 1024px) {
+    .yuji-thread-footer {
+      padding-bottom: 1.25rem;
+    }
+  }
+
+  .yuji-session-list {
+    background: color-mix(in srgb, var(--card) 70%, var(--background));
+  }
+
+  .yuji-new-session {
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-session-row {
+    color: var(--muted-foreground);
+  }
+
+  .yuji-reasoning {
+    padding: 0.5rem 0.625rem;
+    border-radius: 12px;
+    background: rgba(38, 123, 115, 0.06);
+  }
+
+  .yuji-tool-status {
+    background: rgba(205, 115, 28, 0.075);
+  }
+
+  .yuji-moment-button {
+    border: 1px solid rgba(255, 255, 255, 0.66);
+    box-shadow: 0 7px 20px rgba(38, 123, 115, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  .yuji-moment-dialog {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(230, 240, 235, 0.72), transparent 18rem),
+      var(--background);
+  }
+
+  .yuji-archive,
+  .yuji-self,
+  .yuji-settings {
+    background:
+      radial-gradient(circle at 94% 0%, rgba(205, 115, 28, 0.075), transparent 24rem),
+      var(--background);
+  }
+
+  .yuji-page-header {
+    min-height: 4.25rem;
+  }
+
+  .yuji-segmented {
+    border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    background: rgba(240, 234, 223, 0.82);
+  }
+
+  .yuji-segmented button[aria-selected="true"] {
+    background: var(--card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-analysis-banner {
+    border: 1px solid rgba(38, 123, 115, 0.1);
+    background: color-mix(in srgb, var(--primary-soft) 76%, var(--card));
+  }
+
+  .yuji-master-detail {
+    border-color: var(--border);
+    background: var(--card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-list-pane {
+    background: color-mix(in srgb, var(--card) 88%, var(--background));
+  }
+
+  .yuji-detail-pane {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--background) 84%, var(--canvas));
+  }
+
+  .yuji-search {
+    border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    background: rgba(255, 253, 247, 0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .yuji-record-card {
+    margin-bottom: 0.25rem;
+  }
+
+  .yuji-record-card:hover {
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-detail-content {
+    min-height: 100%;
+  }
+
+  .yuji-detail-section {
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  }
+
+  .yuji-pending-card {
+    background: rgba(255, 253, 247, 0.82);
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-self-content {
+    scrollbar-color: color-mix(in srgb, var(--primary) 20%, transparent) transparent;
+  }
+
+  .yuji-insight-card,
+  .yuji-report-card,
+  .yuji-report-content,
+  .yuji-report-history,
+  .yuji-settings-group {
+    border-color: color-mix(in srgb, var(--border) 76%, transparent);
+    background: rgba(255, 253, 247, 0.82);
+    box-shadow: var(--shadow-card);
+  }
+
+  .yuji-report-card:hover {
+    border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+    box-shadow: var(--shadow-floating);
+  }
+
+  .yuji-report-content {
+    background:
+      linear-gradient(145deg, rgba(255, 253, 247, 0.88), rgba(246, 241, 231, 0.76));
+  }
+
+  .yuji-settings-grid {
+    align-content: start;
+  }
+
+  .yuji-settings-group {
+    border-radius: 18px;
+  }
+
+  .yuji-settings-row {
+    min-height: 3.75rem;
+  }
+
+  .yuji-settings-sheet {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(230, 240, 235, 0.74), transparent 18rem),
+      var(--background);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-spin,
+  .animate-pulse,
+  .transition-colors {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

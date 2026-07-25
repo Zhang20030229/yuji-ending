@@ -1,0 +1,281 @@
+/* Shared button treatment and translucent materials for non-button surfaces. */
+.theme-root :where(
+  [data-slot="button"][data-variant="default"],
+  .yuji-moment-button,
+  .record-button,
+  .primary-button,
+  .auth-submit
+) {
+  border: 1px solid var(--color-primary);
+  color: var(--color-white, #fff);
+  background: var(--color-primary);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition:
+    transform 140ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="default"],
+  .yuji-moment-button,
+  .record-button,
+  .primary-button,
+  .auth-submit
+):hover:not(:disabled) {
+  color: var(--color-white, #fff);
+  background: color-mix(in srgb, var(--color-primary) 90%, black);
+  border-color: color-mix(in srgb, var(--color-primary) 90%, black);
+  box-shadow: none;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="default"],
+  .yuji-moment-button,
+  .record-button,
+  .primary-button,
+  .auth-submit
+):active:not(:disabled) {
+  transform: scale(.95);
+  transition-duration: 90ms;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"],
+  .soft-button
+) {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"],
+  .soft-button
+):hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
+  background: var(--color-primary-soft);
+  box-shadow: none;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"],
+  .soft-button
+):active:not(:disabled) {
+  transform: scale(.97);
+  transition-duration: 90ms;
+}
+
+.theme-root [data-slot="button"][data-variant="destructive"] {
+  border: 1px solid var(--color-danger);
+  color: var(--color-white, #fff);
+  background: var(--color-danger);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-root :where(
+  [data-slot="button"][data-variant="default"],
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"],
+  [data-slot="button"][data-variant="destructive"],
+  .yuji-moment-button,
+  .record-button,
+  .primary-button,
+  .soft-button,
+  .auth-submit
+):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.theme-root :where(
+  .icon-button,
+  .close-button,
+  .login-status,
+  .inbox-button,
+  .dashboard-card,
+  .event-list-card,
+  .rhythm-card,
+  .insight-card,
+  .event-row,
+  .language-options,
+  .auth-mode,
+  .auth-form label > div,
+  .record-sheet,
+  .timeline-tooltip,
+  .chart-tooltip,
+  .stage-card,
+  .journal-prompt,
+  .journal-editor textarea,
+  .ai-insight-section
+) {
+  border-color: var(--color-glass-border);
+  background-color: var(--color-glass);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.theme-root :where(
+  .icon-button,
+  .close-button,
+  .login-status,
+  .inbox-button,
+  .subpage-header button,
+  .stage-detail-header button,
+  .range-toggle button,
+  .soft-button,
+  .record-button,
+  .primary-button,
+  .auth-submit,
+  .account-logout,
+  .mood-options button,
+  .language-options button,
+  .reason-toggle,
+  .insight-feedback button
+) {
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.theme-root :where(
+  .icon-button,
+  .close-button,
+  .login-status,
+  .inbox-button,
+  .subpage-header button,
+  .stage-detail-header button,
+  .event-detail-header__button,
+  .soft-button,
+  .mood-options button,
+  .account-logout
+) {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-root :where(
+  .icon-button,
+  .close-button,
+  .login-status,
+  .inbox-button,
+  .subpage-header button,
+  .stage-detail-header button,
+  .event-detail-header__button,
+  .range-toggle button,
+  .soft-button,
+  .record-button,
+  .primary-button,
+  .auth-submit,
+  .account-logout,
+  .mood-options button,
+  .language-options button,
+  .reason-toggle,
+  .insight-feedback button,
+  .pending-resolve__secondary,
+  .pending-resolve__primary
+):active {
+  transform: scale(.96);
+}
+
+.theme-root :where(.subpage-header, .stage-detail-header, .event-detail-header) {
+  position: absolute;
+  z-index: 8;
+  inset: 0 0 auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
+}
+
+.theme-root :where(
+  .subpage-header button,
+  .stage-detail-header button,
+  .event-detail-header__button
+) {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: auto;
+}
+
+.theme-root :where(.record-button, .primary-button, .auth-submit) {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.range-toggle {
+  border: 1px solid var(--color-glass-border);
+  background: color-mix(in srgb, var(--color-surface) 38%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.range-toggle button.is-active,
+.auth-mode button.is-active,
+.language-options button.is-active {
+  border-color: var(--color-glass-border);
+  background: color-mix(in srgb, var(--color-primary-soft) 68%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.72), 0 2px 8px rgba(76,69,47,.045);
+}
+
+.record-overlay {
+  background: rgba(39, 38, 33, .18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.record-sheet {
+  width: calc(100% - 16px);
+  margin: 0 8px 8px;
+  border: 1px solid var(--color-glass-border);
+  border-radius: 28px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, select, textarea) { transition: none !important; }
+}
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .theme-root :where(
+    [data-slot="button"][data-variant="default"],
+    .yuji-moment-button,
+    .record-button,
+    .primary-button,
+    .auth-submit
+  ) {
+    background: var(--color-primary);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .theme-root :where(
+    [data-slot="button"][data-variant="outline"],
+    [data-slot="button"][data-variant="secondary"],
+    .soft-button
+  ) {
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

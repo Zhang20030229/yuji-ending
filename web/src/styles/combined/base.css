@@ -1,0 +1,44 @@
+:root {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --bottom-nav-height: calc(64px + var(--safe-area-bottom));
+  --app-nav-width: 0px;
+  --content-max-width: 1280px;
+  --reading-max-width: 760px;
+  --page-padding: clamp(18px, 4vw, 48px);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; min-height: 100%; }
+body { margin: 0; min-width: 320px; min-height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
+.theme-root { width: 100%; min-height: 100vh; color: var(--foreground); background: var(--canvas); }
+button, select, textarea { font: inherit; color: inherit; }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 28%, transparent); outline-offset: 2px; }
+.sr-only { width: 1px; height: 1px; position: absolute; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+.prototype-stage { width: 100%; min-height: 100vh; min-height: 100dvh; background: var(--color-background); }
+.mobile-prototype { width: 100%; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; position: relative; background: var(--color-background); }
+.app-shell { width: 100%; height: 100%; position: relative; }
+.app-content { width: 100%; height: 100%; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
+.screen { width: 100%; height: 100%; position: relative; overflow: hidden; background: var(--color-background); }
+.icon-button, .close-button { border: 1px solid var(--color-border); background: var(--color-surface-glass); display: grid; place-items: center; cursor: pointer; }
+.icon-button { width: 38px; height: 38px; border-radius: 50%; }
+.close-button { width: 30px; height: 30px; border-radius: 50%; }
+
+@media (min-width: 1024px) {
+  .yuji-shell {
+    --bottom-nav-height: 0px;
+  }
+
+  .app-shell {
+    --app-nav-width: 88px;
+    --bottom-nav-height: 0px;
+    display: grid;
+    grid-template-columns: var(--app-nav-width) minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .app-shell { --app-nav-width: 224px; }
+}

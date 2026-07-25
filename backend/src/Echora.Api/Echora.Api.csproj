@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.13.0" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.13.0" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.13.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageReference Include="Magick.NET-Q8-x64" Version="14.15.0" />
+    <PackageReference Include="MetadataExtractor" Version="2.9.3" />
+    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="SqlSugarCoreNoDrive" Version="5.1.4.216" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.51" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 本机和生产私密配置由发布脚本按需复制，绝不随源码默认进入输出目录。 -->
+    <Content Update="appsettings.*.Local.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <!-- 固定数据快照和同 ObjectKey 附件随应用发布，Code First 后直接恢复，不再调用模型。 -->
+    <Content Update="Demo\demo-snapshot.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Demo\SeedAttachments\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>Echora-Development-Model-Configuration</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

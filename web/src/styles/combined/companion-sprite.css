@@ -1,0 +1,280 @@
+/* ========== 陪伴小精灵样式 ========== */
+
+/* 小精灵主按钮 */
+.companion-sprite-button {
+  position: fixed;
+  z-index: 50;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.companion-sprite-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.companion-sprite-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* 桌面端：侧边栏右侧、底部上方（与账号按钮相近高度）*/
+@media (min-width: 1024px) {
+  .companion-sprite-button {
+    right: calc((100vw - 1024px) / 2 + 232px - 28px);
+    bottom: 8rem;
+  }
+}
+
+/* 移动端：屏幕右下角，在主输入框上方 */
+@media (max-width: 1023px) {
+  .companion-sprite-button {
+    right: 1rem;
+    bottom: 6rem;
+  }
+}
+
+/* 展开后的全屏覆盖层 */
+.companion-sprite-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(var(--background-rgb), 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* 头部区域 */
+.companion-sprite-header {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 768px) {
+  .companion-sprite-header {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
+  }
+}
+
+/* 关闭按钮 */
+.companion-close-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.companion-close-btn:hover {
+  background-color: var(--secondary);
+}
+
+.companion-close-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* 聊天区域 */
+.companion-chat-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* 欢迎消息区域 */
+.companion-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.companion-avatar-large {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 输入区域 */
+.companion-sprite-input-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (min-width: 768px) {
+  .companion-sprite-input-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-bottom: 1.75rem;
+    padding-top: 1.25rem;
+  }
+}
+
+.companion-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.companion-input {
+  flex: 1;
+  min-height: 3rem;
+  padding-left: 1rem;
+  padding-right: 3rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  font-size: 1rem;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.companion-input:focus {
+  border-color: var(--color-primary);
+  ring: 2px solid rgba(var(--primary-rgb), 0.2);
+}
+
+.companion-input::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+/* 发送按钮 */
+.companion-send-btn {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.companion-send-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
+}
+
+.companion-send-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.companion-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 侧边栏小精灵按钮样式 ========== */
+
+.companion-sidebar-button {
+  display: flex;
+  height: 3rem;
+  align-items: center;
+  gap: 0.6875rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.companion-sidebar-button:hover {
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.companion-sidebar-button:focus-visible {
+  outline: none;
+  ring: 2px solid var(--ring);
+  ring-offset: 2px;
+}
+
+/* SpriteIcon 组件样式 */
+.companion-sprite-icon {
+  /* SVG 基础样式已在组件中定义 */
+}
+
+/* 动画效果 */
+@keyframes sprite-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-sprite-pulse {
+  animation: sprite-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Transition 动画类 */
+.transition-sprite-enter {
+  animation: sprite-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sprite-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+  .companion-sprite-header {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .companion-chat-area {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .companion-sprite-input-container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

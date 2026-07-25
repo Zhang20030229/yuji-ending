@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Echora.Api/Echora.Api.csproj" />
+  </Folder>
+</Solution>

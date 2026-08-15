@@ -3,7 +3,7 @@
   "short_name": "遇己",
   "description": "把对话和随手拍下的一刻，整理成可回看的生活与情绪。",
   "id": "/",
-  "start_url": "/app/companion",
+  "start_url": "/app/home",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f7f3ea",

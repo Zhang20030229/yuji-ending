@@ -5,7 +5,6 @@ using Echora.Api.Plugins;
 using Echora.Api.Services;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using SqlSugar;
 
 namespace Echora.Api.Agents;
 
@@ -13,7 +12,8 @@ namespace Echora.Api.Agents;
 public sealed class ConversationAgent(
     IModelChatClientFactory clients,
     AiOptions options,
-    ISqlSugarClient db,
+    MemoryRetrievalService retrieval,
+    MemoryDigestRenderer digests,
     ILogger<ConversationAgent> logger)
 {
     /// <summary>运行 MAF 原生 Function Tool 循环并保留所有更新。</summary>
@@ -23,14 +23,16 @@ public sealed class ConversationAgent(
     {
         var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         var timeTool = new TimePlugin(request.ReferenceTime);
-        var lifeRecords = new LifeRecordQueryPlugin(db, request.User.Id);
-        var selfRecords = new SelfRecordQueryPlugin(db, request.User.Id);
+        var lifeRecords = new LifeRecordQueryPlugin(retrieval, request.User.Id);
+        var selfRecords = new SelfRecordQueryPlugin(retrieval, request.User.Id);
+        var memoryDigest = new MemoryDigestPlugin(digests, request.User.Id);
         var tools = new List<AITool>
         {
             // 方法特性是 Tool 描述的唯一来源，避免注册时覆盖。
             AIFunctionFactory.Create(timeTool.GetCurrentTimeAsync),
             AIFunctionFactory.Create(lifeRecords.SearchAsync),
             AIFunctionFactory.Create(selfRecords.SearchAsync),
+            AIFunctionFactory.Create(memoryDigest.ReadAsync),
         };
         var client = clients.Create(
             options.ToSnapshot(),
@@ -104,6 +106,7 @@ public sealed class ConversationAgent(
         用户询问当前日期、时间、星期，或必须确定“今天、现在”等相对时间时，调用 get_current_time，不要猜测。
         用户在回忆过去、询问已经记录的人物、地点、事件或经历时，按需调用 search_life_records；普通闲聊不要调用。
         当前回答确实需要联系用户既有认识或过去情绪时，按需调用 search_self_records；普通闲聊不要调用。
+        需要通篇了解某个人的完整脉络、情绪的整体走势、认知脉络，或近一年的生活时间线时，调用 read_memory_digest；只找某一件具体的事仍用上面两个 search 工具。
         普通聊天不要强行变成心理咨询。只有对方主动求助，或当前上下文清楚显示同类困扰反复出现时，才可以温和地一起梳理情境、想法、感受和行动。
         先回应感受并确认对方是否愿意继续梳理；一次最多问一个具体问题。不要直接宣布认知偏差，不要自称治疗师。
         不要把推测说成已经确认的事实，不进行医学或心理诊断。

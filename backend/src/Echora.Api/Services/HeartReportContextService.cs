@@ -110,15 +110,17 @@ public sealed class HeartReportContextService(
 
         var displayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName;
         var period = new { startDate = pack.StartDate, endDate = pack.EndDate };
+        // 日报告只覆盖一天，跨日门槛在这里必然不成立，因此单独降档。
+        var dailyPeriod = string.Equals(pack.PeriodType, "Daily", StringComparison.Ordinal);
         var life = BuildLifeSection(
-            displayName, period, messages, conversations, placeRecords, events,
+            displayName, period, dailyPeriod, messages, conversations, placeRecords, events,
             people, places, attachments, sources, refs);
         var relationship = BuildRelationshipSection(
-            displayName, period, personRecords, events, people, attachments, sources, refs);
+            displayName, period, dailyPeriod, personRecords, events, people, attachments, sources, refs);
         var recognition = BuildRecognitionSection(
-            displayName, period, recognitions, sources, refs);
+            displayName, period, dailyPeriod, recognitions, sources, refs);
         var emotion = BuildEmotionSection(
-            displayName, period, emotions, cbtObservations, sources, refs);
+            displayName, period, dailyPeriod, emotions, cbtObservations, sources, refs);
         var latestWellbeing = await LatestWellbeingAsync(pack.UserId, cancellationToken);
 
         logger.LogInformation(
@@ -145,6 +147,7 @@ public sealed class HeartReportContextService(
     private static ReportSectionInput BuildLifeSection(
         string displayName,
         object period,
+        bool dailyPeriod,
         IReadOnlyList<ConversationMessage> messages,
         IReadOnlyList<Conversation> conversations,
         IReadOnlyList<PlaceRecord> placeRecords,
@@ -223,7 +226,7 @@ public sealed class HeartReportContextService(
         };
         return Section(
             "Life",
-            evidence.Length >= 2,
+            evidence.Length >= (dailyPeriod ? 1 : 2),
             metrics,
             new { userDisplayName = displayName, period, lifeRecords = new { fragments, events = eventItems, places = placeItems } },
             evidence);
@@ -233,6 +236,7 @@ public sealed class HeartReportContextService(
     private static ReportSectionInput BuildRelationshipSection(
         string displayName,
         object period,
+        bool dailyPeriod,
         IReadOnlyList<PersonRecord> personRecords,
         IReadOnlyList<LifeEvent> events,
         IReadOnlyDictionary<long, Person> people,
@@ -281,7 +285,7 @@ public sealed class HeartReportContextService(
         };
         return Section(
             "Relationship",
-            evidence.Length >= 2 && personRecords.Count > 0,
+            evidence.Length >= (dailyPeriod ? 1 : 2) && personRecords.Count > 0,
             metrics,
             new { userDisplayName = displayName, period, relationshipRecords = new { people = records, events = eventItems } },
             evidence);
@@ -291,6 +295,7 @@ public sealed class HeartReportContextService(
     private static ReportSectionInput BuildRecognitionSection(
         string displayName,
         object period,
+        bool dailyPeriod,
         IReadOnlyList<Recognition> recognitions,
         IReadOnlyDictionary<string, SourceValue> sources,
         IReadOnlyDictionary<string, string> refs)
@@ -319,7 +324,7 @@ public sealed class HeartReportContextService(
         };
         return Section(
             "Recognition",
-            evidence.Length >= 2,
+            evidence.Length >= (dailyPeriod ? 1 : 2),
             metrics,
             new { userDisplayName = displayName, period, recognitionRecords = records },
             evidence);
@@ -329,6 +334,7 @@ public sealed class HeartReportContextService(
     private static ReportSectionInput BuildEmotionSection(
         string displayName,
         object period,
+        bool dailyPeriod,
         IReadOnlyList<EmotionRecord> emotions,
         IReadOnlyList<CbtObservation> cbtObservations,
         IReadOnlyDictionary<string, SourceValue> sources,
@@ -411,8 +417,10 @@ public sealed class HeartReportContextService(
         var cbtDays = cbtObservations.Select(item => LocalDate(item.OccurredAt)).Distinct().Count();
         return Section(
             "Emotion",
-            evidence.Length >= 3 && daily.Length >= 2
-                || cbtObservations.Count >= 2 && cbtDays >= 2,
+            dailyPeriod
+                ? evidence.Length >= 1
+                : evidence.Length >= 3 && daily.Length >= 2
+                    || cbtObservations.Count >= 2 && cbtDays >= 2,
             metrics,
             new
             {

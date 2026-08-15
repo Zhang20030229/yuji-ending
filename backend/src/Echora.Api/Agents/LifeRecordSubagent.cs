@@ -2,16 +2,16 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Echora.Api.Plugins;
+using Echora.Api.Services;
 using Echora.Api.Workflows;
 using Microsoft.Extensions.AI;
-using SqlSugar;
 
 namespace Echora.Api.Agents;
 
 /// <summary>从当前目标消息或一刻整理生活记录。</summary>
 public sealed class LifeRecordSubagent(
     StructuredAgentRunner runner,
-    ISqlSugarClient db,
+    MemoryRetrievalService retrieval,
     ILogger<LifeRecordSubagent> logger)
 {
     /// <summary>运行一次带完整查询 Tool 循环的非流式结构化分析。</summary>
@@ -20,7 +20,7 @@ public sealed class LifeRecordSubagent(
         var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
-            var query = new LifeRecordQueryPlugin(db, input.UserId);
+            var query = new LifeRecordQueryPlugin(retrieval, input.UserId);
             var raw = await runner.RunAsync<Result>(
                 "life_record_subagent",
                 "整理当前消息或一刻中的片段、人物、地点和事件。",

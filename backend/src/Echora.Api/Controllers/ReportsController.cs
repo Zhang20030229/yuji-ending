@@ -24,7 +24,7 @@ public sealed class ReportsController(HeartReportService reports) : ControllerBa
         return item is null ? NotFound() : Ok(item);
     }
 
-    /// <summary>创建最近 7 天、最近 30 天或自定义日期报告。</summary>
+    /// <summary>创建今天、最近 7 天、最近 30 天或自定义日期报告。</summary>
     [HttpPost]
     public async Task<IActionResult> Generate(
         GenerateReportRequest request,

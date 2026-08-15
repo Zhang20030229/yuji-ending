@@ -17,17 +17,20 @@ public sealed class RelationshipReportAgent(
         try
         {
             var section = input.Sections.Single(item => item.Kind == "Relationship");
+            var dailyPeriod = ReportPeriod.IsDaily(input.PeriodType);
             var raw = await runner.RunAsync<ReportContent>(
                 "relationship_report_agent",
                 "根据给定人物往来、统计和原话依据生成人际往来报告。",
-                Instructions,
+                dailyPeriod ? Instructions + ReportPeriod.DailyScopeSuffix : Instructions,
                 [new ChatMessage(ChatRole.User, section.ContextJson)],
                 [],
                 cancellationToken);
             var content = ReportContent.Parse(
                 raw,
                 section.AllowedEvidenceRefs.ToHashSet(StringComparer.Ordinal),
-                input.UserDisplayName);
+                input.UserDisplayName,
+                null,
+                dailyPeriod);
             return Success(content, startedAt);
         }
         catch (Exception exception)

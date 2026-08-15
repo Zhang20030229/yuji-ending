@@ -21,13 +21,15 @@ import {
 } from "@/pages/self/emotion-views";
 import { DatePicker, MonthPicker, YearPicker } from "@/components/ui/date-picker";
 import { useDataRevision } from "@/components/realtime/DataUpdates";
+import ReportsView from "@/pages/self/ReportsView";
 
-type InsightMode = "day" | "month" | "year";
+type InsightMode = "day" | "month" | "year" | "report";
 
 const modeLabels: Array<{ value: InsightMode; label: string }> = [
   { value: "day", label: "日" },
   { value: "month", label: "月" },
   { value: "year", label: "年" },
+  { value: "report", label: "报告" },
 ];
 
 /** 独立情绪洞察页：以日、月、年三个尺度回看真实情绪记录。 */
@@ -49,6 +51,11 @@ export default function InsightsPage() {
   useEffect(() => setMode(requestedMode), [requestedMode]);
 
   useEffect(() => {
+    if (mode === "report") {
+      setLoading(false);
+      setError("");
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -89,7 +96,7 @@ export default function InsightsPage() {
           <div>
             <span className="emotion-insights__eyebrow"><IconSparkles size={14} /> 洞察</span>
             <h1>情绪洞察</h1>
-            <p>回看情绪在一天、一月与一年里的变化。</p>
+            <p>回看情绪在一天、一月与一年里的变化，也可以生成今日心迹。</p>
           </div>
         </header>
 
@@ -113,7 +120,7 @@ export default function InsightsPage() {
               <DatePicker aria-label="选择日期" value={date} max={today} onChange={setDate} />
             ) : mode === "month" ? (
               <MonthPicker aria-label="选择月份" value={month} max={today.slice(0, 7)} onChange={setMonth} />
-            ) : (
+            ) : mode === "year" ? (
               <YearPicker
                 aria-label="选择洞察年份"
                 value={year}
@@ -121,12 +128,14 @@ export default function InsightsPage() {
                 max={Number(today.slice(0, 4))}
                 onChange={setYear}
               />
-            )}
+            ) : null}
           </div>
         </div>
 
         <main className="emotion-insights__content" aria-live="polite">
-          {loading ? (
+          {mode === "report" ? (
+            <ReportsView defaultPreset="Today" />
+          ) : loading ? (
             <Skeleton />
           ) : error ? (
             <Empty text={error} />
@@ -144,7 +153,7 @@ export default function InsightsPage() {
 }
 
 function toInsightMode(value: string | null): InsightMode {
-  return value === "month" || value === "year" ? value : "day";
+  return value === "month" || value === "year" || value === "report" ? value : "day";
 }
 
 function EmotionYearView({

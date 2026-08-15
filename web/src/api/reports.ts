@@ -43,7 +43,7 @@ export interface ReportContent {
 /** 报告历史卡片。 */
 export interface ReportListItem {
   id: number;
-  periodType: "Weekly" | "Monthly" | "CustomRange";
+  periodType: "Daily" | "Weekly" | "Monthly" | "CustomRange";
   startDate: string;
   endDate: string;
   status: ReportStatus;
@@ -85,7 +85,7 @@ export interface ReportSection {
 /** 完整报告包。 */
 export interface ReportDetail {
   id: number;
-  periodType: "Weekly" | "Monthly" | "CustomRange";
+  periodType: "Daily" | "Weekly" | "Monthly" | "CustomRange";
   startDate: string;
   endDate: string;
   triggerType: "Manual" | "Automatic";
@@ -109,7 +109,7 @@ export interface WellbeingAssessment {
 }
 
 export interface GenerateReportInput {
-  preset: "Last7Days" | "Last30Days" | "Custom";
+  preset: "Today" | "Last7Days" | "Last30Days" | "Custom";
   startDate?: string;
   endDate?: string;
 }

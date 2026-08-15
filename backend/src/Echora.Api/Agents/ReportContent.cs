@@ -27,8 +27,8 @@ public sealed class ReportContent
     [Description("样本或解释上的限制。")]
     public string[] Uncertainties { get; set; } = [];
 
-    /// <summary>由至少两个不同日期来源支持的可能循环。</summary>
-    [Description("由至少两个不同日期来源支持的可能循环；没有时为空数组。")]
+    /// <summary>跨周期为至少两个不同日期支持的可能循环；日报告为当天的单次观察。</summary>
+    [Description("情境到结果的观察链；跨周期需至少两个不同日期支持，日报告只描述当天单次观察。没有时为空数组。")]
     public CbtCycle[] CbtCycles { get; set; } = [];
 
     /// <summary>记录中已经出现的有帮助应对。</summary>
@@ -44,9 +44,10 @@ public sealed class ReportContent
         string raw,
         IReadOnlySet<string> allowedEvidenceRefs,
         string userDisplayName,
-        IReadOnlyDictionary<string, DateOnly>? evidenceDates = null)
+        IReadOnlyDictionary<string, DateOnly>? evidenceDates = null,
+        bool dailyPeriod = false)
     {
-        var content = JsonSerializer.Deserialize<ReportContent>(raw, JsonOptions)
+        var content = JsonSerializer.Deserialize<ReportContent>(Unfence(raw), JsonOptions)
             ?? throw new InvalidDataException("报告 JSON 为空。");
         content.Headline = Personalize(content.Headline, userDisplayName);
         content.Summary = Personalize(content.Summary, userDisplayName);
@@ -89,15 +90,18 @@ public sealed class ReportContent
                     .ToArray();
                 return item;
             })
+            // 日报告只有一天资料，跨日期校验必然失败；此时降为「单次观察」，仅要求有一条真实依据。
             .Where(item => item.Title.Length > 0
                 && item.Observation.Length > 0
-                && item.EvidenceRefs.Length >= 2
-                && evidenceDates is not null
-                && item.EvidenceRefs
-                    .Where(evidenceDates.ContainsKey)
-                    .Select(reference => evidenceDates[reference])
-                    .Distinct()
-                    .Count() >= 2)
+                && (dailyPeriod
+                    ? item.EvidenceRefs.Length >= 1
+                    : item.EvidenceRefs.Length >= 2
+                        && evidenceDates is not null
+                        && item.EvidenceRefs
+                            .Where(evidenceDates.ContainsKey)
+                            .Select(reference => evidenceDates[reference])
+                            .Distinct()
+                            .Count() >= 2))
             .Take(2)
             .ToArray();
         content.HelpfulResponses = (content.HelpfulResponses ?? [])
@@ -118,7 +122,8 @@ public sealed class ReportContent
             content.SmallExperiment.Title = Personalize(content.SmallExperiment.Title, userDisplayName);
             content.SmallExperiment.Action = Personalize(content.SmallExperiment.Action, userDisplayName);
             content.SmallExperiment.ReflectionQuestion = Personalize(content.SmallExperiment.ReflectionQuestion, userDisplayName);
-            if (content.CbtCycles.Length == 0 && content.HelpfulResponses.Length == 0
+            // 日报告允许仅凭当天观察给出最小行动；跨周期仍要求先有循环或已验证的有帮助应对。
+            if (!dailyPeriod && content.CbtCycles.Length == 0 && content.HelpfulResponses.Length == 0
                 || content.SmallExperiment.Title.Length == 0
                 || content.SmallExperiment.Action.Length == 0
                 || content.SmallExperiment.ReflectionQuestion.Length == 0)
@@ -129,6 +134,16 @@ public sealed class ReportContent
 
     /// <summary>序列化可持久化的最终结构。</summary>
     public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
+
+    /// <summary>剥掉模型偶发返回的 Markdown 代码围栏，只取其中的 JSON 对象。</summary>
+    private static string Unfence(string raw)
+    {
+        var text = raw.Trim();
+        if (!text.StartsWith('`')) return text;
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        return start >= 0 && end > start ? text[start..(end + 1)] : text;
+    }
 
     /// <summary>清理模型返回的空白和重复短文本。</summary>
     private static string[] Clean(

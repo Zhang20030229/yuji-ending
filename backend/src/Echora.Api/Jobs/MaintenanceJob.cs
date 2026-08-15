@@ -10,6 +10,7 @@ public sealed class MaintenanceJob(
     ISqlSugarClient db,
     IBackgroundJobClient jobs,
     EmotionSummaryService summaries,
+    MemoryEmbeddingService embeddings,
     ILogger<MaintenanceJob> logger)
 {
     /// <summary>仅补投尚未进入队列的分析，供五分钟轻量巡检使用。</summary>
@@ -28,9 +29,11 @@ public sealed class MaintenanceJob(
     {
         var recovered = await RecoverAnalysisRunsAsync(cancellationToken);
         await summaries.RepairMissingAsync(cancellationToken);
+        var orphans = await embeddings.RemoveOrphansAsync(cancellationToken);
         logger.LogInformation(
-            "Daily maintenance completed: RecoveredAnalysisCount {RecoveredAnalysisCount}",
-            recovered);
+            "Daily maintenance completed: RecoveredAnalysisCount {RecoveredAnalysisCount}, EmbeddingOrphansRemoved {EmbeddingOrphansRemoved}",
+            recovered,
+            orphans);
     }
 
     /// <summary>补投没有 Hangfire 作业编号的待处理分析并返回数量。</summary>

@@ -4,6 +4,7 @@ using Echora.Api.Authentication;
 using Echora.Api.Contracts;
 using Echora.Api.Entities;
 using Echora.Api.Jobs;
+using Echora.Api.Workflows;
 using Hangfire;
 using SqlSugar;
 
@@ -203,7 +204,8 @@ public sealed class HeartReportService(
                     && item.Status == "Complete"
                     && item.ContentJson != null)
                 .CountAsync(cancellationToken);
-            if (completedCount < 2)
+            // 日报告常常只有一个分区成立，因此综合心迹的最低分区数按周期分档。
+            if (completedCount < ReportPeriod.MinimumComposableSections(pack.PeriodType))
                 return false;
             pack.HangfireJobId = jobs.Enqueue<HeartReportJob>(
                 job => job.RetryOverallAsync(pack.Id, CancellationToken.None));
@@ -357,6 +359,12 @@ public sealed class HeartReportService(
         string type;
         switch (request.Preset?.Trim())
         {
+            case "Today":
+                // 日报告覆盖「今天到此刻」；同一天重复生成会复用并覆盖同一个报告包。
+                start = today;
+                end = today;
+                type = "Daily";
+                break;
             case "Last7Days":
                 start = today.AddDays(-6);
                 end = today;
@@ -375,7 +383,7 @@ public sealed class HeartReportService(
                 type = "CustomRange";
                 break;
             default:
-                throw new ArgumentException("报告范围只能是最近 7 天、最近 30 天或自定义。");
+                throw new ArgumentException("报告范围只能是今天、最近 7 天、最近 30 天或自定义。");
         }
         if (start > end) throw new ArgumentException("开始日期不能晚于结束日期。");
         if (end > today) throw new ArgumentException("结束日期不能晚于今天。");

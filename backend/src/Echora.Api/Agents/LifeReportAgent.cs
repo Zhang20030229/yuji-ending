@@ -18,17 +18,20 @@ public sealed class LifeReportAgent(
         try
         {
             var section = input.Sections.Single(item => item.Kind == "Life");
+            var dailyPeriod = ReportPeriod.IsDaily(input.PeriodType);
             var raw = await runner.RunAsync<ReportContent>(
                 "life_report_agent",
                 "根据给定生活记录、统计和原话依据生成生活回望。",
-                Instructions,
+                dailyPeriod ? Instructions + ReportPeriod.DailyScopeSuffix : Instructions,
                 [new ChatMessage(ChatRole.User, section.ContextJson)],
                 [],
                 cancellationToken);
             var content = ReportContent.Parse(
                 raw,
                 section.AllowedEvidenceRefs.ToHashSet(StringComparer.Ordinal),
-                input.UserDisplayName);
+                input.UserDisplayName,
+                null,
+                dailyPeriod);
             return Success("Life", content, startedAt);
         }
         catch (Exception exception)

@@ -5,6 +5,7 @@ import {
   IconFileAnalytics,
   IconHeart,
   IconLoader2,
+  IconPhoto,
   IconPlus,
   IconQuote,
   IconRefresh,
@@ -27,6 +28,8 @@ import {
   type WellbeingAssessment,
 } from "@/api/reports";
 import ImagePreviewDialog from "@/pages/companion/ImagePreviewDialog";
+import ReportShareCard from "@/pages/insights/ReportShareCard";
+import { useReportImage } from "@/pages/insights/use-report-image";
 import { useDataRevision } from "@/components/realtime/DataUpdates";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -39,14 +42,20 @@ import {
 } from "@/components/ui/sheet";
 
 /** 心迹报告首页与详情；同一组件覆盖 Web 和移动端。 */
-export default function ReportsView({ reportId }: { reportId?: string }) {
+export default function ReportsView({
+  reportId,
+  defaultPreset = "Last7Days",
+}: {
+  reportId?: string;
+  defaultPreset?: GenerateReportInput["preset"];
+}) {
   const id = Number(reportId);
   return Number.isSafeInteger(id) && id > 0
     ? <ReportDetailView id={id} />
-    : <ReportHome />;
+    : <ReportHome defaultPreset={defaultPreset} />;
 }
 
-function ReportHome() {
+function ReportHome({ defaultPreset }: { defaultPreset: GenerateReportInput["preset"] }) {
   const navigate = useNavigate();
   const [reports, setReports] = useState<ReportListItem[]>();
   const [wellbeing, setWellbeing] = useState<WellbeingAssessment[]>();
@@ -121,7 +130,7 @@ function ReportHome() {
       </>
     )}
 
-    <GenerateReportSheet open={generateOpen} onOpenChange={setGenerateOpen} />
+    <GenerateReportSheet open={generateOpen} onOpenChange={setGenerateOpen} defaultPreset={defaultPreset} />
     <WellbeingSheet open={wellbeingOpen} onOpenChange={setWellbeingOpen} onSaved={load} />
   </div>;
 }
@@ -172,24 +181,83 @@ function ReportDetailView({ id }: { id: number }) {
         <IconLoader2 className="size-5 animate-spin" aria-hidden />四个角度正在分别回看，完成后会自动更新
       </div>}
 
-      {report.status === "NotEnoughData" && <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center"><h3 className="font-semibold">这段时间的记录还不足</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">继续记录真实经历、感受和认识后，再回来生成报告。</p></div>}
+      {report.status === "NotEnoughData" && (report.periodType === "Daily"
+        ? <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center"><h3 className="font-semibold">今天还没有留下记录</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">先和小遇聊几句，或者发一条一刻，再回来生成今日心迹。</p></div>
+        : <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center"><h3 className="font-semibold">这段时间的记录还不足</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">继续记录真实经历、感受和认识后，再回来生成报告。</p></div>)}
 
       {report.overall ? <div className="mt-6"><ReportContentCard title="综合心迹" content={report.overall} evidence={report.overallEvidence} featured /></div>
         : report.error && report.status !== "Running" && report.status !== "Pending" ? <FailureCard title="综合心迹" error={report.error} busy={retrying === "Overall"} onRetry={() => void retry("Overall")} /> : null}
 
+      <ReportShareAction report={report} />
+
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        {report.sections.map((section) => <ReportSectionCard key={section.kind} section={section} retrying={retrying === section.kind} onRetry={() => void retry(section.kind)} />)}
+        {report.sections.map((section) => <ReportSectionCard key={section.kind} section={section} daily={report.periodType === "Daily"} retrying={retrying === section.kind} onRetry={() => void retry(section.kind)} />)}
       </div>
     </>}
   </div>;
 }
 
-function ReportSectionCard({ section, retrying, onRetry }: { section: ReportSection; retrying: boolean; onRetry: () => void }) {
+function ReportShareAction({ report }: { report: ReportDetail }) {
+  const shareable = report.overall
+    ?? report.sections.find((section) => section.status === "Complete" && section.content)?.content;
+  const evidence = report.overall
+    ? report.overallEvidence
+    : report.sections.find((section) => section.status === "Complete" && section.content)?.evidence ?? [];
+  const [includeQuotes, setIncludeQuotes] = useState(false);
+  const fallbackText = useCallback(
+    () => shareable ? shareableText(shareable, periodLabel(report.periodType), formatRange(report.startDate, report.endDate)) : "",
+    [report.endDate, report.periodType, report.startDate, shareable],
+  );
+  const { cardRef, busy, outcome, share } = useReportImage(fallbackText);
+  if (!shareable) return null;
+
+  return <div className="mt-5 rounded-2xl border border-border/70 bg-background p-5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-semibold">导出长图</h3>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">生成一张可以保存或分享的长图。图中不含照片。</p>
+      </div>
+      <Button variant="outline" className="h-10 rounded-xl" disabled={busy} onClick={() => void share(`遇己心迹-${report.startDate}.png`)}>
+        {busy ? <><IconLoader2 className="animate-spin" />正在生成…</> : <><IconPhoto className="size-4" aria-hidden />生成长图</>}
+      </Button>
+    </div>
+    <label className="mt-3 flex min-h-9 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+      <input type="checkbox" checked={includeQuotes} onChange={(event) => setIncludeQuotes(event.target.checked)} className="accent-primary" />
+      在图中包含原话（默认不包含，打开后图片会含有你写下的原文）
+    </label>
+    {outcome === "downloaded" && <p className="mt-2 text-xs text-muted-foreground">长图已开始下载。</p>}
+    {outcome === "copied" && <p className="mt-2 text-xs text-destructive" role="alert">图片生成失败，已把文字版复制到剪贴板。</p>}
+    {outcome === "failed" && <p className="mt-2 text-xs text-destructive" role="alert">图片生成失败，复制文字也没有成功，请稍后再试。</p>}
+    <div aria-hidden className="pointer-events-none fixed -left-[9999px] top-0">
+      <ReportShareCard
+        ref={cardRef}
+        content={shareable}
+        evidence={evidence}
+        periodLabel={periodLabel(report.periodType)}
+        rangeText={formatRange(report.startDate, report.endDate)}
+        includeQuotes={includeQuotes}
+      />
+    </div>
+  </div>;
+}
+
+/** 栅格化失败时的文字兜底，与分享图口径一致：不含原话。 */
+function shareableText(content: ReportContent, period: string, range: string) {
+  const lines = [`${period} · ${range}`, content.headline, content.summary];
+  content.findings.forEach((finding) => lines.push(`· ${finding.title}：${finding.observation}`));
+  if (content.smallExperiment)
+    lines.push(`可以尝试的一小步：${content.smallExperiment.title}——${content.smallExperiment.action}`);
+  content.reflectionQuestions.forEach((item) => lines.push(`可以留意：${item}`));
+  if (content.uncertainties.length > 0) lines.push(content.uncertainties.join("；"));
+  return lines.join("\n");
+}
+
+function ReportSectionCard({ section, daily, retrying, onRetry }: { section: ReportSection; daily: boolean; retrying: boolean; onRetry: () => void }) {
   const title = sectionLabel(section.kind);
   if (section.status === "Pending" || section.status === "Running")
     return <div className="flex min-h-48 items-center justify-center gap-2 rounded-2xl border border-border/70 text-sm text-muted-foreground"><IconLoader2 className="size-4 animate-spin" />{title}正在生成</div>;
   if (section.status === "NotEnoughData")
-    return <div className="rounded-2xl border border-border/70 p-5"><p className="text-xs font-semibold text-muted-foreground">{title}</p><h3 className="mt-4 font-semibold">记录不足</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{notEnoughText(section.kind)}</p><Metrics kind={section.kind} metrics={section.metrics} /></div>;
+    return <div className="rounded-2xl border border-border/70 p-5"><p className="text-xs font-semibold text-muted-foreground">{title}</p><h3 className="mt-4 font-semibold">记录不足</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{notEnoughText(section.kind, daily)}</p><Metrics kind={section.kind} metrics={section.metrics} /></div>;
   if (section.status === "Failed" || !section.content)
     return <FailureCard title={title} error={section.error || "这个分区生成失败。"} busy={retrying} onRetry={onRetry} />;
   return <ReportContentCard title={title} content={section.content} evidence={section.evidence} metrics={<Metrics kind={section.kind} metrics={section.metrics} />} />;
@@ -276,14 +344,16 @@ function FailureCard({ title, error, busy, onRetry }: { title: string; error: st
   return <div className="mt-5 rounded-2xl border border-destructive/20 bg-destructive/5 p-5"><p className="text-xs font-semibold text-destructive">{title}</p><h3 className="mt-3 font-semibold">生成失败</h3><p className="mt-2 text-sm text-muted-foreground">{error}</p><Button variant="outline" size="sm" className="mt-4 rounded-lg" disabled={busy} onClick={onRetry}><IconRefresh className={busy ? "animate-spin" : ""} />{busy ? "正在重试…" : "重试"}</Button></div>;
 }
 
-function GenerateReportSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function GenerateReportSheet({ open, onOpenChange, defaultPreset }: { open: boolean; onOpenChange: (open: boolean) => void; defaultPreset: GenerateReportInput["preset"] }) {
   const navigate = useNavigate();
-  const [preset, setPreset] = useState<GenerateReportInput["preset"]>("Last7Days");
+  const [preset, setPreset] = useState<GenerateReportInput["preset"]>(defaultPreset);
   const [startDate, setStartDate] = useState(todayInput());
   const [endDate, setEndDate] = useState(todayInput());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const rangeText = useMemo(() => selectedRangeText(preset, startDate, endDate), [endDate, preset, startDate]);
+
+  useEffect(() => { if (open) setPreset(defaultPreset); }, [defaultPreset, open]);
 
   async function submit() {
     setBusy(true);
@@ -308,6 +378,7 @@ function GenerateReportSheet({ open, onOpenChange }: { open: boolean; onOpenChan
       <SheetHeader className="px-0 pb-4 pt-5 text-left"><SheetTitle className="text-xl">生成心迹报告</SheetTitle><SheetDescription>选择要回看的日期范围，开始和结束日期都包含。</SheetDescription></SheetHeader>
       <div className="grid gap-2">
         {([
+          ["Today", "今天", "回看今天到此刻，并给出下一步"],
           ["Last7Days", "最近 7 天", "适合快速回看最近一周"],
           ["Last30Days", "最近 30 天", "适合查看较完整的近期变化"],
           ["Custom", "自定义日期", "最多 90 天"],
@@ -399,7 +470,9 @@ function metricItems(kind: ReportSection["kind"], metrics: Record<string, unknow
 function sectionLabel(kind: ReportSection["kind"]) {
   return { Life: "生活回望", Emotion: "情绪脉络", Relationship: "人际往来", Recognition: "自我认识" }[kind];
 }
-function notEnoughText(kind: ReportSection["kind"]) {
+function notEnoughText(kind: ReportSection["kind"], daily?: boolean) {
+  if (daily)
+    return { Life: "今天还没有留下生活记录。", Emotion: "今天还没有留下情绪记录。", Relationship: "今天还没有涉及具体人物的记录。", Recognition: "今天还没有留下新的认识。" }[kind];
   return { Life: "至少需要两条不同原话支持的生活记录。", Emotion: "至少需要三条原话，并覆盖两个不同日期。", Relationship: "至少需要两条涉及人物的不同原话。", Recognition: "至少需要两条有依据的认识。" }[kind];
 }
 function statusLabel(status: ReportStatus) {
@@ -409,7 +482,7 @@ function statusHeadline(status: ReportStatus) {
   return status === "NotEnoughData" ? "这段时间的记录还不足" : status === "Failed" ? "报告生成失败" : status === "Partial" ? "部分回望已经完成" : status === "Complete" ? "一份新的心迹报告" : "正在生成心迹报告";
 }
 function periodLabel(type: ReportListItem["periodType"]) {
-  return type === "Weekly" ? "一周心迹" : type === "Monthly" ? "一月心迹" : "自定义回望";
+  return type === "Daily" ? "今日心迹" : type === "Weekly" ? "一周心迹" : type === "Monthly" ? "一月心迹" : "自定义回望";
 }
 function formatRange(start: string, end: string) {
   const formatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" });
@@ -418,6 +491,7 @@ function formatRange(start: string, end: string) {
 function selectedRangeText(preset: GenerateReportInput["preset"], start: string, end: string) {
   if (preset === "Custom") return start && end ? formatRange(start, end) : "请选择完整日期";
   const today = new Date();
+  if (preset === "Today") return `${formatRange(toDateInput(today), toDateInput(today))}（今天可能还没结束）`;
   const first = new Date(today);
   first.setDate(today.getDate() - (preset === "Last7Days" ? 6 : 29));
   return formatRange(toDateInput(first), toDateInput(today));

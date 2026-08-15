@@ -43,7 +43,7 @@ public sealed class HeartReportWorkflow(
             async (batch, token) =>
             {
                 var successful = batch.Sections.Where(item => item.Succeeded).ToArray();
-                var overall = successful.Length >= 2
+                var overall = successful.Length >= ReportPeriod.MinimumComposableSections(batch.Input.PeriodType)
                     ? await composer.RunAsync(batch.Input, batch.Sections, token)
                     : null;
                 return new HeartReportResult(

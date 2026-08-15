@@ -21,7 +21,7 @@ public sealed class ReportPack
     [SugarColumn(ColumnName = "user_id")]
     public long UserId { get; set; }
 
-    /// <summary>周期类型：Weekly、Monthly 或 CustomRange。</summary>
+    /// <summary>周期类型：Daily、Weekly、Monthly 或 CustomRange。</summary>
     [SugarColumn(ColumnName = "period_type", Length = 20)]
     public string PeriodType { get; set; } = string.Empty;
 

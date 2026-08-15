@@ -7,7 +7,7 @@ namespace Echora.Api.Data;
 public static class DatabaseInitializer
 {
     /// <summary>显式同步当前实体；Hangfire 表由 Hangfire 自己维护。</summary>
-    public static void Initialize(ISqlSugarClient db)
+    public static void Initialize(ISqlSugarClient db, int embeddingDimensions, ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(db);
         db.CodeFirst.InitTables(
@@ -33,5 +33,7 @@ public static class DatabaseInitializer
             typeof(ReportPack),
             typeof(ReportSection),
             typeof(WellbeingAssessment));
+        // 实体之外的 PostgreSQL 专属检索结构在同一入口补齐。
+        VectorSchema.Initialize(db, embeddingDimensions, logger);
     }
 }

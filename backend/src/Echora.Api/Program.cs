@@ -61,19 +61,34 @@ builder.Services.AddScoped<Echora.Api.Services.AttachmentService>();
 builder.Services.AddScoped<Echora.Api.BackgroundJobs.CleanupJob>();
 builder.Services.AddScoped<Echora.Api.BackgroundJobs.AccountCleanupJob>();
 var aiOptions = config.GetSection(AiOptions.SectionName).Get<AiOptions>() ?? new AiOptions();
-if (string.IsNullOrWhiteSpace(aiOptions.ApiKey))
-{
-    // 仅兼容现有被 Git 忽略的本机开发密钥位置；产品配置入口已经固定为 AI 节。
-    aiOptions = new AiOptions
-    {
-        Endpoint = aiOptions.Endpoint,
-        ModelId = aiOptions.ModelId,
-        ReasoningEnabled = aiOptions.ReasoningEnabled,
-        ApiKey = config["DevelopmentModelDefaults:Chat:ApiKey"] ?? string.Empty,
-    };
-}
 builder.Services.AddSingleton(aiOptions);
 builder.Services.AddSingleton<IModelChatClientFactory, ModelChatClientFactory>();
+var embeddingOptions = config.GetSection(EmbeddingOptions.SectionName).Get<EmbeddingOptions>()
+    ?? new EmbeddingOptions();
+// 当前只实现了 MiniMax 的私有 embedding 协议；指向其他供应商会得到无法解析的响应，因此直接视为未配置。
+if (embeddingOptions.IsEnabled
+    && Uri.TryCreate(embeddingOptions.Endpoint, UriKind.Absolute, out var embeddingEndpoint)
+    && ModelVendorResolver.Resolve(embeddingEndpoint) != ModelVendor.MiniMax)
+{
+    embeddingOptions = new EmbeddingOptions
+    {
+        Endpoint = embeddingOptions.Endpoint,
+        ModelId = embeddingOptions.ModelId,
+        GroupId = embeddingOptions.GroupId,
+        Dimensions = embeddingOptions.Dimensions,
+        BatchSize = embeddingOptions.BatchSize,
+        ApiKey = string.Empty,
+    };
+}
+builder.Services.AddSingleton(embeddingOptions);
+// embedding 供应商错误必须立刻如实暴露，重试由 Hangfire 在有状态的向量化任务层承担。
+builder.Services.AddHttpClient<IMemoryEmbeddingClient, MiniMaxEmbeddingClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    if (!string.IsNullOrWhiteSpace(embeddingOptions.ApiKey))
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", embeddingOptions.ApiKey);
+});
 builder.Services.AddScoped<Echora.Api.Agents.ConversationAgent>();
 builder.Services.AddScoped<Echora.Api.Agents.StructuredAgentRunner>();
 builder.Services.AddScoped<Echora.Api.Agents.LifeRecordSubagent>();
@@ -88,6 +103,9 @@ builder.Services.AddScoped<Echora.Api.Agents.ReportComposerAgent>();
 builder.Services.AddScoped<Echora.Api.Workflows.AnalysisWorkflow>();
 builder.Services.AddScoped<Echora.Api.Workflows.HeartReportWorkflow>();
 builder.Services.AddScoped<Echora.Api.Services.AnalysisService>();
+builder.Services.AddScoped<Echora.Api.Services.MemoryEmbeddingService>();
+builder.Services.AddScoped<Echora.Api.Services.MemoryRetrievalService>();
+builder.Services.AddScoped<Echora.Api.Services.MemoryDigestRenderer>();
 builder.Services.AddScoped<Echora.Api.Services.ArchiveViewService>();
 builder.Services.AddScoped<Echora.Api.Services.SelfViewService>();
 builder.Services.AddScoped<Echora.Api.Services.EmotionSummaryService>();
@@ -102,22 +120,26 @@ builder.Services.AddScoped<Echora.Api.Jobs.AnalysisJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.MomentJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.EmotionSummaryJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.MaintenanceJob>();
+builder.Services.AddScoped<Echora.Api.Jobs.MemoryEmbeddingJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.HeartReportJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.HeartReportScheduleJob>();
 builder.Services.AddScoped<Echora.Api.Demo.DemoSnapshotSeeder>();
 builder.Services.AddScoped<IPasswordHasher<UserAccount>, PasswordHasher<UserAccount>>();
 
-var hangfireEnabled = config.GetValue("Hangfire:Enabled", true);
-if (hangfireEnabled)
+// 存储与 IBackgroundJobClient 始终注册：入队只是往 Hangfire 表写一行，不要求本实例运行工作进程。
+var hangfireSchema = config["Hangfire:Schema"] ?? "hangfire";
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(
+        options => options.UseNpgsqlConnection(config.GetConnectionString("Default")),
+        new PostgreSqlStorageOptions { SchemaName = hangfireSchema }));
+
+// Hangfire:Enabled=false 表示本实例只入队不执行，任务积压在库里等其他实例或下次启动消费。
+var hangfireWorkerEnabled = config.GetValue("Hangfire:Enabled", true);
+if (hangfireWorkerEnabled)
 {
-    var hangfireSchema = config["Hangfire:Schema"] ?? "hangfire";
-    builder.Services.AddHangfire(configuration => configuration
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(
-            options => options.UseNpgsqlConnection(config.GetConnectionString("Default")),
-            new PostgreSqlStorageOptions { SchemaName = hangfireSchema }));
     builder.Services.AddHangfireServer(options =>
     {
         options.WorkerCount = 1;
@@ -238,7 +260,11 @@ var servesSpa = app.Environment.WebRootFileProvider.GetFileInfo("index.html").Ex
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
-    Echora.Api.Data.DatabaseInitializer.Initialize(db);
+    Echora.Api.Data.DatabaseInitializer.Initialize(
+        db,
+        embeddingOptions.Dimensions,
+        scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Echora.Api.Data.VectorSchema"));
     if (config.GetValue("DemoData:Enabled", true))
     {
         // Code First 完成后直接恢复已验证快照；启动不再调用模型重新生成演示资料。
@@ -247,7 +273,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (hangfireEnabled)
+if (hangfireWorkerEnabled)
 {
     // 固定补投没有成功入队的分析；同名任务在重启时只会被更新。
     var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
@@ -260,11 +286,20 @@ if (hangfireEnabled)
         job => job.ExecuteAsync(CancellationToken.None),
         "30 3 * * *",
         new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai") });
+    recurringJobs.AddOrUpdate<Echora.Api.Jobs.MemoryEmbeddingJob>(
+        "echora-memory-embedding-backfill",
+        job => job.BackfillAsync(CancellationToken.None),
+        "*/15 * * * *");
     recurringJobs.AddOrUpdate<Echora.Api.Jobs.HeartReportScheduleJob>(
         "echora-heart-report-schedule",
         job => job.ExecuteAsync(CancellationToken.None),
         "0 4 * * *",
         new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai") });
+}
+else
+{
+    app.Logger.LogWarning(
+        "Hangfire worker disabled: this instance only enqueues jobs. Queued work waits for another worker instance.");
 }
 
 // --- Pipeline ---

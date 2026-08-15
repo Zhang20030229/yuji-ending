@@ -79,6 +79,15 @@ public sealed class AnalysisJob(
             throw;
         }
         await notifier.NotifyAsync(run.UserId, "settled", cancellationToken, "analysis", "archive", "self");
+        try
+        {
+            // 新记录需要补向量；入队失败不影响分析结果，由巡检 backfill 兜底。
+            jobs.Enqueue<MemoryEmbeddingJob>(job => job.ExecuteAsync(run.UserId, CancellationToken.None));
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Memory embedding enqueue failed: UserId {UserId}", run.UserId);
+        }
         var failures = branches.Where(branch => Status(run, branch) == "Failed").ToArray();
         logger.LogInformation("Analysis Job completed: AnalysisRunId {AnalysisRunId}, FailedBranches {FailedBranches}", run.Id, failures);
         if (failures.Length > 0) throw new InvalidOperationException($"后台分析分支失败：{string.Join(',', failures)}。");

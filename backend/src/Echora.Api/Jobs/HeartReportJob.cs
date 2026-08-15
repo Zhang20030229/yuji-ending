@@ -237,12 +237,13 @@ public sealed class HeartReportJob(
             .Select(item => new ReportBranchResult(item.Kind, true, item.ContentJson, null, item.DurationMs ?? 0))
             .ToArray();
         ReportBranchResult? overall = null;
-        if (completed.Length >= 2 && (forceComposer || rows.Any(item => item.Status == "Failed") || pack.OverallContentJson is null))
+        var minimum = ReportPeriod.MinimumComposableSections(pack.PeriodType);
+        if (completed.Length >= minimum && (forceComposer || rows.Any(item => item.Status == "Failed") || pack.OverallContentJson is null))
         {
             overall = await composer.RunAsync(input, completed, cancellationToken);
             SaveOverall(pack, overall);
         }
-        else if (completed.Length < 2)
+        else if (completed.Length < minimum)
         {
             pack.OverallContentJson = null;
             pack.ErrorSummary = null;

@@ -35,35 +35,59 @@ public sealed class ModelChatClientFactory(ILoggerFactory? loggerFactory = null)
             // ECHORA 禁用这层不可见重试：对话立即如实报错，后台只由有状态的 Hangfire 有限重试。
             RetryPolicy = new ClientRetryPolicy(0),
         };
-        var isMimo = endpoint.Host.EndsWith("xiaomimimo.com", StringComparison.OrdinalIgnoreCase);
-        if (isMimo)
+        var vendor = ModelVendorResolver.Resolve(endpoint);
+        if (vendor == ModelVendor.Mimo)
             options.AddPolicy(new MimoSseNullFixPolicy(), PipelinePosition.PerCall);
         if (networkTimeout is not null)
             options.NetworkTimeout = networkTimeout.Value;
         IChatClient client = new OpenAIClient(new ApiKeyCredential(configuration.ApiKey), options)
             .GetChatClient(configuration.ModelId)
             .AsIChatClient();
-        if (isMimo)
+        if (vendor == ModelVendor.Mimo)
             client = new MimoChatClientAdapter(
                 client,
                 loggerFactory?.CreateLogger<MimoChatClientAdapter>());
+        if (vendor == ModelVendor.MiniMax)
+            client = new MiniMaxThinkingChatClient(client);
         return client
             .AsBuilder()
             .ConfigureOptions(chatOptions =>
             {
-                if (isMimo)
+                switch (vendor)
                 {
-                    // MiMo 官方 Chat Completions 使用 thinking.type，不使用 OpenAI reasoning_effort。
-                    chatOptions.Reasoning = null;
-                    chatOptions.RawRepresentationFactory = _ => CreateMimoCompletionOptions(reasoningEffort);
-                }
-                else
-                {
-                    chatOptions.Reasoning = new() { Effort = reasoningEffort };
+                    case ModelVendor.Mimo:
+                        // MiMo 官方 Chat Completions 使用 thinking.type，不使用 OpenAI reasoning_effort。
+                        chatOptions.Reasoning = null;
+                        chatOptions.RawRepresentationFactory = _ => CreateMimoCompletionOptions(reasoningEffort);
+                        break;
+                    case ModelVendor.MiniMax:
+                        // MiniMax-M3 同样使用私有 thinking.type，不接受 reasoning_effort。
+                        chatOptions.Reasoning = null;
+                        chatOptions.RawRepresentationFactory = _ => CreateMiniMaxCompletionOptions(reasoningEffort);
+                        break;
+                    default:
+                        chatOptions.Reasoning = new() { Effort = reasoningEffort };
+                        break;
                 }
             })
             .Build();
     }
+
+    /// <summary>创建携带 MiniMax 私有 thinking 字段的选项；其余标准参数仍由 MEAI 补齐。</summary>
+#pragma warning disable OPENAI001
+    internal static ChatCompletionOptions CreateMiniMaxCompletionOptions(ReasoningEffort reasoningEffort)
+    {
+        // 实测 MiniMax-M3 接受 adaptive 与 disabled 两种取值。
+        var type = reasoningEffort == ReasoningEffort.None ? "disabled" : "adaptive";
+        return ModelReaderWriter.Read<ChatCompletionOptions>(
+                   BinaryData.FromBytes(JsonSerializer.SerializeToUtf8Bytes(new
+                   {
+                       thinking = new { type },
+                   })),
+                   ModelReaderWriterOptions.Json)
+               ?? throw new InvalidOperationException("无法构造 MiniMax Chat Completions 参数。");
+    }
+#pragma warning restore OPENAI001
 
     /// <summary>创建保留 MiMo 私有 thinking 字段、同时允许 MEAI 补齐其他标准参数的选项。</summary>
 #pragma warning disable OPENAI001

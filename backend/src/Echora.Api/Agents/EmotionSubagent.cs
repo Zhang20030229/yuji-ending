@@ -2,16 +2,16 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Echora.Api.Plugins;
+using Echora.Api.Services;
 using Echora.Api.Workflows;
 using Microsoft.Extensions.AI;
-using SqlSugar;
 
 namespace Echora.Api.Agents;
 
 /// <summary>从当前目标消息或一刻整理有原话依据的情绪。</summary>
 public sealed class EmotionSubagent(
     StructuredAgentRunner runner,
-    ISqlSugarClient db,
+    MemoryRetrievalService retrieval,
     ILogger<EmotionSubagent> logger)
 {
     /// <summary>运行一次带完整查询 Tool 循环的非流式结构化分析。</summary>
@@ -20,7 +20,7 @@ public sealed class EmotionSubagent(
         var startedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
-            var query = new SelfRecordQueryPlugin(db, input.UserId);
+            var query = new SelfRecordQueryPlugin(retrieval, input.UserId);
             var raw = await runner.RunAsync<Result>(
                 "emotion_subagent",
                 "整理当前消息或一刻中有原话依据的用户情绪。",

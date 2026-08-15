@@ -11,6 +11,8 @@ export default defineConfig({
     },
   },
   server: {
+    // 绑定所有网卡，便于同一局域网内的手机直接访问开发页面。
+    host: true,
     proxy: {
       "/api": {
         target: "http://localhost:5237",

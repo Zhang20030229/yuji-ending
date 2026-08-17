@@ -3,10 +3,12 @@ import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
   IconChevronRight,
   IconDownload,
+  IconFileText,
   IconKey,
   IconLogout,
   IconMessageCircle,
   IconRefresh,
+  IconShieldLock,
   IconTrash,
   IconUser,
 } from "@tabler/icons-react";
@@ -28,6 +30,7 @@ import { MonthPicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { backwards } from "@/lib/navigation";
+import { SafetyNotice } from "@/pages/legal/LegalPages";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -128,6 +131,11 @@ export default function SettingsPage() {
             <SettingsSection title="整理">
               <SettingsRow icon={IconRefresh} label="运行记录" value="查看失败并重试" onClick={() => setPanel("runs")} />
             </SettingsSection>
+            <SettingsSection title="条款与安全">
+              <SettingsRow icon={IconShieldLock} label="隐私政策" onClick={() => navigate("/privacy")} />
+              <SettingsRow icon={IconFileText} label="用户条款" onClick={() => navigate("/terms")} />
+            </SettingsSection>
+            <SafetyNotice />
             <SettingsSection title="登录">
               <SettingsRow icon={IconLogout} label={busy ? "正在退出…" : "退出登录"} disabled={busy} onClick={() => void signOut()} />
               <SettingsRow icon={IconTrash} label="删除账号" danger disabled={busy} onClick={() => {

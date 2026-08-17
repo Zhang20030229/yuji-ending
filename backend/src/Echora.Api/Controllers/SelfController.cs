@@ -11,13 +11,45 @@ namespace Echora.Api.Controllers;
 [Route("api/self")]
 public sealed class SelfController(SelfViewService self) : ControllerBase
 {
-    /// <summary>按分类或关键词读取认识。</summary>
+    /// <summary>按分类或关键词读取认识；rejected 支持 false（默认）、true 与 all。</summary>
     [HttpGet("recognitions")]
     public async Task<IActionResult> GetRecognitions(
         string? category,
         string? q,
-        CancellationToken cancellationToken) =>
-        Ok(await self.GetRecognitionsAsync(category, q, cancellationToken));
+        CancellationToken cancellationToken,
+        string? rejected = null) =>
+        Ok(await self.GetRecognitionsAsync(category, q, cancellationToken, rejected));
+
+    /// <summary>驳回一条认识，使其退出档案、召回与后续报告。</summary>
+    [HttpPost("recognitions/{id:long}/rejection")]
+    public async Task<IActionResult> RejectRecognition(
+        long id,
+        RejectRecognitionRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await self.RejectRecognitionAsync(id, request.Note, cancellationToken)
+                ? NoContent()
+                : NotFound();
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = exception.Message,
+                Status = StatusCodes.Status400BadRequest,
+                Instance = Request.Path,
+            });
+        }
+    }
+
+    /// <summary>撤销驳回，使认识重新参与档案与召回。</summary>
+    [HttpDelete("recognitions/{id:long}/rejection")]
+    public async Task<IActionResult> RestoreRecognition(long id, CancellationToken cancellationToken) =>
+        await self.RestoreRecognitionAsync(id, cancellationToken)
+            ? NoContent()
+            : NotFound();
 
     /// <summary>读取指定日期的情绪。</summary>
     [HttpGet("emotions/day")]

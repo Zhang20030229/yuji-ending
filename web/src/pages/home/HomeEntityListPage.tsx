@@ -130,17 +130,19 @@ export function RecognitionsListPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showRejected, setShowRejected] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    getRecognitions("", "", controller.signal)
+    setLoading(true);
+    getRecognitions("", "", controller.signal, showRejected ? "true" : undefined)
       .then(setItems)
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof ApiError ? reason.message : "暂时无法载入认识列表。");
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [revision]);
+  }, [revision, showRejected]);
 
   const filtered = useMemo(() => {
     const value = query.trim().toLocaleLowerCase();
@@ -160,9 +162,19 @@ export function RecognitionsListPage() {
   >
     {loading ? <ListSkeleton /> : null}
     {error ? <p className="data-error" role="alert">{error}</p> : null}
-    {!loading && !error && filtered.length === 0 ? <Empty text={query ? "没有匹配的认识。" : "还没有形成认识。"} /> : null}
+    <button
+      type="button"
+      className="home-list-filter"
+      aria-pressed={showRejected}
+      onClick={() => setShowRejected((value) => !value)}
+    >
+      {showRejected ? "看未驳回的认识" : "看已驳回的认识"}
+    </button>
+    {!loading && !error && filtered.length === 0
+      ? <Empty text={query ? "没有匹配的认识。" : showRejected ? "还没有驳回过任何认识。" : "还没有形成认识。"} />
+      : null}
     {filtered.map((recognition) => (
-      <button type="button" className="home-list-card home-recognition-list-card" key={recognition.id} onClick={() => navigate(`/app/recognitions/${recognition.id}`)}>
+      <button type="button" className="home-list-card home-recognition-list-card" key={recognition.id} onClick={() => navigate(`/app/recognitions/${recognition.id}`)} style={recognition.rejectedAt ? { opacity: 0.55 } : undefined}>
         <span className="home-list-category">{categoryLabel(recognition.category, "zh")}</span>
         <span className="home-list-card__content">
           <strong>{recognition.content}</strong>

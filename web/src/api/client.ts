@@ -1,4 +1,6 @@
-const API_ROOT = "/api";
+import { API_BASE } from "./base-url.ts";
+
+const API_ROOT = `${API_BASE}/api`;
 const ACCESS_TOKEN_KEY = "echora.access-token";
 let accessToken = readSessionToken();
 

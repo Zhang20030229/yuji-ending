@@ -6,10 +6,12 @@ using Echora.Api.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Text;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading.RateLimiting;
@@ -31,6 +33,16 @@ if (builder.Environment.IsDevelopment())
     builder.Configuration.AddJsonFile("appsettings.Development.Local.json", optional: true, reloadOnChange: true);
 }
 var config = builder.Configuration;
+
+if (!builder.Environment.IsDevelopment())
+{
+    // 生产靠环境变量注入密钥；缺失时必须启动失败，否则会带着空密钥或空模型凭据对外服务。
+    string[] requiredKeys = ["ConnectionStrings:Default", "AI:ApiKey", "AI:Embedding:ApiKey"];
+    var missing = requiredKeys.Where(key => string.IsNullOrWhiteSpace(config[key])).ToArray();
+    if (missing.Length > 0)
+        throw new InvalidOperationException(
+            $"Missing required production configuration: {string.Join(", ", missing)}. Provide them as environment variables.");
+}
 
 // --- Infrastructure ---
 builder.Services.AddEchoraDatabase(config);
@@ -233,12 +245,21 @@ builder.Services.AddRateLimiter(o =>
 });
 
 // --- CORS ---
+// 生产只放行显式配置的站点来源与 iOS 壳的固定自定义 scheme；开发环境额外保留本机与局域网调试入口。
+var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var allowLocalOrigins = builder.Environment.IsDevelopment();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.SetIsOriginAllowed(origin =>
-        Uri.TryCreate(origin, UriKind.Absolute, out var uri)
-        && uri.Scheme is "http" or "https"
-        && (uri.Host is "localhost" or "127.0.0.1" || System.Net.IPAddress.TryParse(uri.Host, out _)))
+        // Capacitor 打包后的页面来源固定为 capacitor://localhost，scheme 不是 http/https。
+        origin is "capacitor://localhost" or "ionic://localhost"
+        || allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)
+        || (allowLocalOrigins && IsLocalDebugOrigin(origin)))
      .AllowAnyHeader().AllowAnyMethod()));
+
+static bool IsLocalDebugOrigin(string origin) =>
+    Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+    && uri.Scheme is "http" or "https"
+    && (uri.Host is "localhost" or "127.0.0.1" || System.Net.IPAddress.TryParse(uri.Host, out _));
 
 // --- API ---
 builder.Services.AddProblemDetails();
@@ -303,6 +324,14 @@ else
 }
 
 // --- Pipeline ---
+// 反代终止 TLS，需要按 X-Forwarded-* 还原真实 scheme 与客户端 IP，否则 HSTS 判断与登录限流都按容器内网地址计算。
+var forwardedHeaders = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+};
+// 只信任 Compose 内网段的反代，不放开任意来源，避免伪造 X-Forwarded-For 绕过按 IP 计数的登录限流。
+forwardedHeaders.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+app.UseForwardedHeaders(forwardedHeaders);
 app.UseResponseCompression();
 app.UseExceptionHandler();
 if (!app.Environment.IsDevelopment())

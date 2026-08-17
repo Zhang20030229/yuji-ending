@@ -18,7 +18,7 @@ import {
   updateEntityRecordSummary,
   type EntityDetail,
 } from "@/api/archive";
-import { getRecognitions, type RecognitionItem } from "@/api/self";
+import { getRecognitions, rejectRecognition, restoreRecognition, type RecognitionItem } from "@/api/self";
 import SecondaryPageHeader, { useSecondaryHeaderScroll } from "@/components/layout/SecondaryPageHeader";
 import { categoryLabel } from "@/pages/tree/vendor/categories";
 import { backwards } from "@/lib/navigation";
@@ -149,10 +149,15 @@ export function RecognitionDetailPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const [detail, setDetail] = useState<RecognitionItem>();
   const [error, setError] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    getRecognitions("", "", controller.signal)
+    // 详情页要能展示并撤销已驳回的认识，所以这里读取全部状态。
+    getRecognitions("", "", controller.signal, "all")
       .then((items) => {
         // API 为避免浏览器丢失 64 位精度，会把标识符序列化为字符串。
         const found = items.find((item) => String(item.id) === itemId);
@@ -161,12 +166,42 @@ export function RecognitionDetailPage() {
       })
       .catch((reason: unknown) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "暂时无法载入认识详情。"); });
     return () => controller.abort();
-  }, [itemId, revision]);
+  }, [itemId, revision, reload]);
+
+  const submitRejection = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError("");
+    try {
+      await rejectRecognition(detail.id, note);
+      setNoteOpen(false);
+      setNote("");
+      setReload((value) => value + 1);
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "驳回没有成功，请再试一次。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitRestore = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError("");
+    try {
+      await restoreRecognition(detail.id);
+      setReload((value) => value + 1);
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "撤销没有成功，请再试一次。");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return <DetailShell title="一条认识" subtitle={detail ? categoryLabel(detail.category, "zh") : "认识详情"} onBack={() => backwards(navigate, "/app/recognitions")}>
     {error ? <p className="data-error" role="alert">{error}</p> : null}
     {detail ? <>
-      <article className="home-recognition-hero">
+      <article className="home-recognition-hero" style={detail.rejectedAt ? { opacity: 0.55 } : undefined}>
         <span>{categoryLabel(detail.category, "zh")}</span>
         <h2>{detail.content}</h2>
         <time dateTime={detail.updatedAt}>{formatDateTime(detail.updatedAt)}更新</time>
@@ -178,8 +213,60 @@ export function RecognitionDetailPage() {
           {detail.sources.length === 0 ? <Empty /> : detail.sources.map((source) => <blockquote key={`${source.sourceType}-${source.messageId}`}><IconQuote size={15} aria-hidden />{source.text}</blockquote>)}
         </article>
       </DetailSection>
+      <RecognitionRejection
+        detail={detail}
+        busy={busy}
+        noteOpen={noteOpen}
+        note={note}
+        onNote={setNote}
+        onOpenNote={() => setNoteOpen(true)}
+        onCancelNote={() => { setNoteOpen(false); setNote(""); }}
+        onReject={submitRejection}
+        onRestore={submitRestore}
+      />
     </> : !error ? <p className="data-empty">正在载入…</p> : null}
   </DetailShell>;
+}
+
+function RecognitionRejection({ detail, busy, noteOpen, note, onNote, onOpenNote, onCancelNote, onReject, onRestore }: {
+  detail: RecognitionItem;
+  busy: boolean;
+  noteOpen: boolean;
+  note: string;
+  onNote: (value: string) => void;
+  onOpenNote: () => void;
+  onCancelNote: () => void;
+  onReject: () => void;
+  onRestore: () => void;
+}) {
+  if (detail.rejectedAt) {
+    return <DetailSection title="你已驳回这条认识" icon={<IconMessageCircle size={17} aria-hidden />}>
+      <article className="home-evidence-card">
+        <p>它不会再出现在档案、检索和之后的报告里，原话仍然保留。</p>
+        {detail.rejectionNote ? <blockquote>{detail.rejectionNote}</blockquote> : null}
+        <button type="button" onClick={onRestore} disabled={busy}>撤销驳回</button>
+      </article>
+    </DetailSection>;
+  }
+  return <DetailSection title="这条说得准吗" icon={<IconMessageCircle size={17} aria-hidden />}>
+    <article className="home-evidence-card">
+      {noteOpen ? <>
+        <textarea
+          value={note}
+          onChange={(event) => onNote(event.target.value)}
+          maxLength={500}
+          rows={3}
+          placeholder="可以说说哪里不对，也可以不填"
+          aria-label="驳回说明"
+        />
+        <button type="button" onClick={onReject} disabled={busy}>确认驳回</button>
+        <button type="button" onClick={onCancelNote} disabled={busy}>取消</button>
+      </> : <>
+        <p>如果这条归纳不符合你，可以驳回它。驳回后它不再进入档案与报告，也不会被重新归纳出来。</p>
+        <button type="button" onClick={onOpenNote} disabled={busy}>这条不准确</button>
+      </>}
+    </article>
+  </DetailSection>;
 }
 
 function DetailShell({ title, subtitle, onBack, children }: { title: string; subtitle: string; onBack: () => void; children: React.ReactNode }) {

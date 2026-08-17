@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Echora.Api.Plugins;
@@ -21,10 +22,15 @@ public sealed class RecognitionSubagent(
         try
         {
             var query = new SelfRecordQueryPlugin(retrieval, input.UserId);
+            // 用户驳回过的归纳作为负面清单随提示词下发；没有驳回记录时行为与改造前完全一致。
+            var rejected = await retrieval.GetRejectedRecognitionsAsync(input.UserId, cancellationToken);
+            var instructions = rejected.Count == 0
+                ? Instructions
+                : $"{Instructions}\n\n{RenderRejected(rejected)}";
             var raw = await runner.RunAsync<Result>(
                 "recognition_subagent",
                 "整理当前消息或一刻中有原话依据的用户认识。",
-                Instructions,
+                instructions,
                 input.Messages,
                 [AIFunctionFactory.Create(query.SearchAsync)],
                 cancellationToken);
@@ -132,8 +138,25 @@ public sealed class RecognitionSubagent(
         一条认识只表达一个分类；关键词填写 1 到 5 个便于搜索的简短词组。
         当前内容只回忆昨天或更早经历时 retrospectiveOnly=true，不生成认识。
         历史 Tool Result 只能用于匹配和避免重复，不能成为当前认识的事实依据。
+        用户对既有认识的否认、纠正或反驳，不是任何新认识的依据。
 
         只返回一个 JSON 对象，字段必须与下例完全一致；没有认识时 recognitions 返回 []：
         {"retrospectiveOnly":false,"recognitions":[{"category":"Preference","content":"喜欢吃炸鸡。","keywords":["喜欢的食物","炸鸡"]}]}
         """;
+
+    /// <summary>把用户驳回过的归纳渲染成负面清单，附在提示词末尾。</summary>
+    private static string RenderRejected(IReadOnlyList<MemoryRetrievalService.RejectedRecognition> rejected)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("【用户已明确驳回的归纳，不得再次产出】");
+        foreach (var item in rejected)
+            builder.AppendLine(item.Note is null
+                ? $"- （{item.Category}）{item.Content}"
+                : $"- （{item.Category}）{item.Content}　用户说明：{item.Note}");
+        builder.AppendLine();
+        builder.AppendLine("以上判断已被用户本人否认。不得再次输出这些认识，也不得输出它们的同义改写或程度更弱的版本。");
+        builder.AppendLine(
+            "用户的驳回只表示这条归纳不成立，不是新的证据：不得据此推断用户在回避、防御、阻抗、不愿面对或缺乏自我觉察，也不得因此产出任何新的认识。");
+        return builder.ToString();
+    }
 }

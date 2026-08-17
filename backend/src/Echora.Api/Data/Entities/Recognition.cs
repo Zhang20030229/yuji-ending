@@ -6,6 +6,7 @@ namespace Echora.Api.Entities;
 [SugarTable("recognitions")]
 [SugarIndex("ix_recognitions_user_conversation", nameof(UserId), OrderByType.Asc, nameof(ConversationId), OrderByType.Asc)]
 [SugarIndex("ix_recognitions_user_category", nameof(UserId), OrderByType.Asc, nameof(Category), OrderByType.Asc)]
+[SugarIndex("ix_recognitions_user_rejected", nameof(UserId), OrderByType.Asc, nameof(RejectedAt), OrderByType.Asc)]
 public sealed class Recognition
 {
     /// <summary>数据库自增主键。</summary>
@@ -47,4 +48,12 @@ public sealed class Recognition
     /// <summary>同一来源重试后的更新时间。</summary>
     [SugarColumn(ColumnName = "updated_at", ColumnDataType = "timestamptz")]
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>用户驳回这条归纳的时间；为空表示未被驳回。</summary>
+    [SugarColumn(ColumnName = "rejected_at", ColumnDataType = "timestamptz", IsNullable = true)]
+    public DateTimeOffset? RejectedAt { get; set; }
+
+    /// <summary>用户驳回时可选填写的说明，会作为负面清单的一部分提供给归纳模型。</summary>
+    [SugarColumn(ColumnName = "rejection_note", ColumnDataType = "text", IsNullable = true)]
+    public string? RejectionNote { get; set; }
 }

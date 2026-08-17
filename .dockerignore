@@ -21,6 +21,8 @@ tmp
 **/attachments
 web/node_modules
 web/dist
+web/ios
+web/android
 **/appsettings.*.Local.json
 **/appsettings.Production.json
 **/.env

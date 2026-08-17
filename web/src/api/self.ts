@@ -20,6 +20,8 @@ export interface RecognitionItem {
   conversationTitle: string;
   updatedAt: string;
   sources: SelfQuote[];
+  rejectedAt?: string | null;
+  rejectionNote?: string | null;
 }
 
 /** 一天内的一条情绪记录。 */
@@ -89,12 +91,31 @@ export interface EmotionYear {
   families: Array<{ family: string; activeDays: number; peakIntensity: number; recordCount: number }>;
 }
 
-/** 读取认识列表。 */
-export function getRecognitions(category: string, query: string, signal?: AbortSignal) {
+/** 读取认识列表；rejected 省略时只返回未被驳回的认识。 */
+export function getRecognitions(
+  category: string,
+  query: string,
+  signal?: AbortSignal,
+  rejected?: "true" | "all",
+) {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
   if (query.trim()) params.set("q", query.trim());
+  if (rejected) params.set("rejected", rejected);
   return apiJson<RecognitionItem[]>(`/self/recognitions${params.size ? `?${params}` : ""}`, { signal });
+}
+
+/** 驳回一条认识；原话不会被修改，档案、召回与后续报告都不再包含它。 */
+export async function rejectRecognition(id: number, note?: string) {
+  await apiFetch(`/self/recognitions/${id}/rejection`, {
+    method: "POST",
+    body: JSON.stringify({ note: note?.trim() ? note.trim() : null }),
+  });
+}
+
+/** 撤销驳回，让这条认识重新参与档案与召回。 */
+export async function restoreRecognition(id: number) {
+  await apiFetch(`/self/recognitions/${id}/rejection`, { method: "DELETE" });
 }
 
 /** 读取一天的情绪。 */

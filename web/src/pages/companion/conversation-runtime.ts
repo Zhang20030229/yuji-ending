@@ -14,6 +14,7 @@ import {
   type ConversationTurnPage,
 } from "@/api/conversation";
 import { readAssetIdFromContentUrl } from "./asset-route";
+import { apiUrl } from "@/api/base-url";
 import { createId } from "@/lib/utils";
 
 /** 创建只承载 ECHORA 唯一连续对话的 AG-UI Agent。 */
@@ -22,7 +23,7 @@ export function createConversationAgent(
   onResponseCommitted?: () => void,
 ) {
   return new HttpAgent({
-    url: "/api/conversation/ag-ui",
+    url: apiUrl("/api/conversation/ag-ui"),
     threadId: `conversation-${sessionId}`,
     fetch: (url, request) => runPersistedTurn(sessionId, url, request, onResponseCommitted),
   });

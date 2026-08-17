@@ -1,0 +1,66 @@
+# 单机部署编排：PostgreSQL(pgvector) + API(内含 SPA) + Caddy(自动 TLS)。
+# 变量取自同目录 `.env`（参照 `.env.example`），缺失即启动失败，不会带着空密钥上线。
+
+services:
+  db:
+    # 现网为 PostgreSQL 18 + pgvector，镜像大版本必须对齐，否则数据目录不兼容。
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: echora
+      POSTGRES_USER: echora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echora -d echora"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=echora;Username=echora;Password=${POSTGRES_PASSWORD:?}"
+      # TLS 由 Caddy 终止，容器内部不再跳转 HTTPS。
+      Https__Redirect: "false"
+      Hangfire__Enabled: "true"
+      DemoData__Enabled: "true"
+      Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN:?}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?}
+      AI__ApiKey: ${AI_API_KEY:?}
+      AI__Embedding__ApiKey: ${AI_EMBEDDING_API_KEY:?}
+      AI__Embedding__GroupId: ${AI_EMBEDDING_GROUP_ID:?}
+      Storage__Provider: Local
+    volumes:
+      - attachments:/app/attachments
+    depends_on:
+      db:
+        condition: service_healthy
+    # 只允许经 Caddy 访问，不映射宿主端口，保证 X-Forwarded-* 一定来自可信反代。
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      YUJI_DOMAIN: ${YUJI_DOMAIN:?}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  attachments:
+  caddydata:
+  caddyconfig:

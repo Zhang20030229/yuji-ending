@@ -12,6 +12,7 @@ import { UserContext } from "./user-context";
 import MomentCapture from "@/components/moments/MomentCapture";
 import SpriteIcon from "@/components/companion/SpriteIcon";
 import { DataUpdates } from "@/components/realtime/DataUpdates";
+import { tapFeedback } from "@/native/shell";
 
 interface AppLayoutProps {
   /** 在侧边栏的位置插入小精灵按钮 */
@@ -154,6 +155,7 @@ export default function AppLayout({
                   "yuji-mobile-tab flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   isActive ? "bg-primary-soft font-semibold text-primary" : "",
                 ].join(" ")}
+                onClick={tapFeedback}
               >
                 <Icon className="size-[21px]" aria-hidden />
                 <span className="max-w-full truncate px-1">{label}</span>
@@ -168,6 +170,7 @@ export default function AppLayout({
                   "yuji-mobile-tab flex h-[52px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                   isActive ? "bg-primary-soft font-semibold text-primary" : "",
                 ].join(" ")}
+                onClick={tapFeedback}
               >
                 <Icon className="size-[21px]" aria-hidden />
                 <span className="max-w-full truncate px-1">{label}</span>

@@ -6,6 +6,17 @@ import AccessPage from "@/pages/access/AccessPage";
 export const router = createBrowserRouter([
   { path: "/access", element: <AccessPage /> },
   {
+    // 隐私政策与条款必须无需登录即可访问：App Store 要求提供公开地址。
+    path: "/privacy",
+    lazy: async () => ({ Component: (await import("@/pages/legal/LegalPages")).PrivacyPage }),
+    hydrateFallbackElement: <div className="min-h-dvh bg-background" aria-label="正在载入隐私政策" />,
+  },
+  {
+    path: "/terms",
+    lazy: async () => ({ Component: (await import("@/pages/legal/LegalPages")).TermsPage }),
+    hydrateFallbackElement: <div className="min-h-dvh bg-background" aria-label="正在载入用户条款" />,
+  },
+  {
     path: "/onboarding",
     lazy: async () => ({ Component: (await import("@/pages/onboarding/OnboardingPage")).default }),
     hydrateFallbackElement: <div className="min-h-dvh bg-[#070706]" aria-label="正在载入首次引导" />,

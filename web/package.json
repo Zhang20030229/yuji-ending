@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:ios": "tsc -b && vite build --mode capacitor && cap sync ios",
+    "build:ios:staging": "tsc -b && vite build --mode capacitor-staging && cap sync ios",
     "lint": "oxlint",
     "test": "node --test src/pages/companion/asset-route.test.ts src/pages/companion/conversation-session-state.test.ts src/api/map-data.test.ts",
     "preview": "vite preview"
@@ -15,6 +17,12 @@
     "@assistant-ui/react": "^0.14.26",
     "@assistant-ui/react-ag-ui": "^0.0.44",
     "@assistant-ui/react-markdown": "^0.14.5",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.5.0",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.3",
     "@microsoft/signalr": "^10.0.0",
     "@phosphor-icons/react": "^2.1.10",
     "@tabler/icons-react": "^3.44.0",
@@ -36,6 +44,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.0",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

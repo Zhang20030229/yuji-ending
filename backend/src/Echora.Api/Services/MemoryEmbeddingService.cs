@@ -80,6 +80,22 @@ public sealed class MemoryEmbeddingService(
         return removed;
     }
 
+    /// <summary>删除单条来源的向量，用于用户主动驳回后立即退出语义召回。</summary>
+    public async Task RemoveAsync(
+        string sourceType,
+        long sourceId,
+        long userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!VectorSchema.VectorSearchAvailable) return;
+        await db.Ado.ExecuteCommandAsync(
+            """
+            DELETE FROM memory_embeddings
+            WHERE user_id = @userId AND source_type = @sourceType AND source_id = @sourceId;
+            """,
+            new { userId, sourceType, sourceId });
+    }
+
     /// <summary>把一条向量幂等写入；同一来源重复同步只更新。</summary>
     private Task<int> UpsertAsync(
         long userId,
@@ -221,7 +237,10 @@ public sealed class MemoryEmbeddingService(
             Join($"会话片段：{item.Title}", item.Summary),
             item.LastMessageAt ?? item.CreatedAt)));
 
-        var recognitions = await db.Queryable<Recognition>().Where(item => item.UserId == userId).ToListAsync(cancellationToken);
+        // 被用户驳回的认识不再进入语义召回池，否则回填任务会把删掉的向量重新写回。
+        var recognitions = await db.Queryable<Recognition>()
+            .Where(item => item.UserId == userId && item.RejectedAt == null)
+            .ToListAsync(cancellationToken);
         sources.AddRange(recognitions.Select(item => new MemorySource(
             "recognition",
             item.Id,

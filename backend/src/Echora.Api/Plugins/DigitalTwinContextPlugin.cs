@@ -33,7 +33,7 @@ public sealed class DigitalTwinContextPlugin(ISqlSugarClient db, long userId)
             .Take(50)
             .ToListAsync(cancellationToken);
         var recognitions = await db.Queryable<Recognition>()
-            .Where(item => item.UserId == userId)
+            .Where(item => item.UserId == userId && item.RejectedAt == null)
             .OrderBy(item => item.CreatedAt, OrderByType.Desc)
             .Take(20)
             .ToListAsync(cancellationToken);

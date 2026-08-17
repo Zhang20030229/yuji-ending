@@ -1,0 +1,6 @@
+# 反代与自动 TLS：证书由 Caddy 通过 ACME 申请并续期，数据存放在 caddydata 卷。
+# WebSocket（SignalR /api/updates）由 reverse_proxy 自动透传 upgrade，无需额外配置。
+{$YUJI_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8080
+}

@@ -68,7 +68,7 @@ public sealed class HeartReportContextService(
             .Where(item => InRange(item.SourceMessageId, item.SourceMomentId, messageIds, momentIds))
             .ToArray();
         var recognitions = (await db.Queryable<Recognition>()
-                .Where(item => item.UserId == pack.UserId)
+                .Where(item => item.UserId == pack.UserId && item.RejectedAt == null)
                 .ToListAsync(cancellationToken))
             .Where(item => InRange(item.SourceMessageId, item.SourceMomentId, messageIds, momentIds))
             .ToArray();

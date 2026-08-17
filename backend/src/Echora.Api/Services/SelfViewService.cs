@@ -7,16 +7,53 @@ using SqlSugar;
 namespace Echora.Api.Services;
 
 /// <summary>为遇己页面组合认识和情绪日/月数据。</summary>
-public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor accessor)
+public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor accessor, MemoryEmbeddingService embeddings)
 {
     private long UserId => accessor.HttpContext?.User.GetRequiredId()
         ?? throw new UnauthorizedAccessException("当前请求没有用户身份。");
 
-    /// <summary>按分类和关键词读取认识及其原话。</summary>
-    public async Task<IReadOnlyList<RecognitionItem>> GetRecognitionsAsync(string? category, string? query, CancellationToken cancellationToken)
+    /// <summary>驳回一条认识；不改动原话，只让它退出所有引用通道。</summary>
+    public async Task<bool> RejectRecognitionAsync(long id, string? note, CancellationToken cancellationToken)
+    {
+        var trimmed = Clean(note);
+        if (trimmed is { Length: > 500 })
+            throw new ArgumentException("驳回说明不能超过 500 字。");
+        var now = DateTimeOffset.UtcNow;
+        var affected = await db.Updateable<Recognition>()
+            .SetColumns(item => new Recognition { RejectedAt = now, RejectionNote = trimmed, UpdatedAt = now })
+            .Where(item => item.Id == id && item.UserId == UserId)
+            .ExecuteCommandAsync(cancellationToken);
+        if (affected == 0) return false;
+        // 立即删除向量，否则回填任务会在下一轮把它当作缺失向量写回语义召回池。
+        await embeddings.RemoveAsync("recognition", id, UserId, cancellationToken);
+        return true;
+    }
+
+    /// <summary>撤销驳回；向量由回填任务自动补回，不在此处重算。</summary>
+    public async Task<bool> RestoreRecognitionAsync(long id, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return await db.Updateable<Recognition>()
+            .SetColumns(item => new Recognition { RejectedAt = null, RejectionNote = null, UpdatedAt = now })
+            .Where(item => item.Id == id && item.UserId == UserId)
+            .ExecuteCommandAsync(cancellationToken) > 0;
+    }
+
+    /// <summary>按分类和关键词读取认识及其原话；默认只返回未被驳回的认识。</summary>
+    public async Task<IReadOnlyList<RecognitionItem>> GetRecognitionsAsync(
+        string? category,
+        string? query,
+        CancellationToken cancellationToken,
+        string? rejected = null)
     {
         var recognitionQuery = db.Queryable<Recognition>()
             .Where(item => item.UserId == UserId);
+        recognitionQuery = rejected switch
+        {
+            "true" => recognitionQuery.Where(item => item.RejectedAt != null),
+            "all" => recognitionQuery,
+            _ => recognitionQuery.Where(item => item.RejectedAt == null),
+        };
         if (!string.IsNullOrWhiteSpace(category))
             recognitionQuery = recognitionQuery.Where(item => item.Category == category);
         var rows = await recognitionQuery
@@ -45,7 +82,9 @@ public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor acc
                     ? title
                     : "一刻",
                 item.UpdatedAt,
-                GetQuotes(quotes, item.SourceMessageId, item.SourceMomentId)))
+                GetQuotes(quotes, item.SourceMessageId, item.SourceMomentId),
+                item.RejectedAt,
+                item.RejectionNote))
             .ToArray();
     }
 
@@ -332,7 +371,7 @@ public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor acc
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    public sealed record RecognitionItem(long Id, string Category, string Content, IReadOnlyList<string> Keywords, long ConversationId, string ConversationTitle, DateTimeOffset UpdatedAt, IReadOnlyList<Quote> Sources);
+    public sealed record RecognitionItem(long Id, string Category, string Content, IReadOnlyList<string> Keywords, long ConversationId, string ConversationTitle, DateTimeOffset UpdatedAt, IReadOnlyList<Quote> Sources, DateTimeOffset? RejectedAt, string? RejectionNote);
     public sealed record Quote(long MessageId, string SourceType, string Text, DateTimeOffset CreatedAt, string? LocationName, string? LocationAddress);
     public sealed record EmotionDay(DateOnly Date, string? Summary, int ConversationCount, int SourceMessageCount, IReadOnlyList<EmotionItem> Items, IReadOnlyList<FamilyDayStat> Families, IReadOnlyList<CbtObservationItem> CbtObservations);
     public sealed record EmotionItem(long Id, string Family, string Subtype, short Intensity, string Summary, DateTimeOffset OccurredAt, long ConversationId, string ConversationTitle, IReadOnlyList<Quote> Sources);

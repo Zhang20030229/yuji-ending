@@ -84,6 +84,26 @@
     color: var(--foreground);
     background: var(--canvas);
     font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    /* WKWebView 里整页橡皮筋会露出容器底色，原生壳中必须关掉。 */
+    overscroll-behavior: none;
+    /* 长按不再弹出系统菜单；正文与输入框在下面单独恢复可选中。 */
+    -webkit-touch-callout: none;
+  }
+
+  p,
+  input,
+  textarea,
+  [data-selectable] {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  input,
+  textarea,
+  select {
+    /* 字号小于 16px 时 iOS 会在聚焦瞬间自动放大整页。 */
+    font-size: max(16px, 1em);
   }
 
   button,

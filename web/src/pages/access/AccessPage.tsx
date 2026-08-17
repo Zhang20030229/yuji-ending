@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { IconArrowRight, IconEye, IconEyeOff } from "@tabler/icons-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { calculateAgeFromBirthMonth, getMe, hasPendingOnboarding, login, parseBirthMonth, register, saveProfile } from "@/api/auth";
 import { hasAccessToken } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -136,6 +136,13 @@ function RegisterForm({ onLogin, onCreated, error, setError }: {
     <AccessError message={error} />
     <Button disabled={busy} className={`mt-8 ${actionClass}`}>{busy ? "正在创建…" : <>继续<IconArrowRight /></>}</Button>
     <button type="button" onClick={onLogin} className="mt-5 min-h-11 w-full text-sm text-muted-foreground hover:text-foreground">已有账号？返回登录</button>
+    <p className="mt-6 text-center text-[11px] leading-5 text-muted-foreground">
+      创建账号即表示你已阅读并同意
+      <Link to="/terms" className="underline">《用户条款》</Link>
+      与
+      <Link to="/privacy" className="underline">《隐私政策》</Link>
+      。遇己不提供医疗或心理诊断服务。
+    </p>
   </form>;
 }
 

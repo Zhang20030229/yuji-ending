@@ -131,7 +131,7 @@ public sealed class MemoryDigestRenderer(ISqlSugarClient db)
     private async Task<string> RenderRecognitionAsync(long userId, CancellationToken cancellationToken)
     {
         var recognitions = await db.Queryable<Recognition>()
-            .Where(item => item.UserId == userId)
+            .Where(item => item.UserId == userId && item.RejectedAt == null)
             .OrderBy(item => item.CreatedAt, OrderByType.Desc)
             .Take(80)
             .ToListAsync(cancellationToken);

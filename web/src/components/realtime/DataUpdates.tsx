@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { apiUrl } from "@/api/base-url";
 import { getAccessToken } from "@/api/client";
 
 const EVENT_NAME = "echora:data-changed";
@@ -13,7 +14,7 @@ interface DataChanged {
 export function DataUpdates({ children }: { children: ReactNode }) {
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl("/api/updates", { accessTokenFactory: () => getAccessToken() ?? "" })
+      .withUrl(apiUrl("/api/updates"), { accessTokenFactory: () => getAccessToken() ?? "" })
       .withAutomaticReconnect([0, 2_000, 10_000, 30_000])
       .configureLogging(LogLevel.Warning)
       .build();

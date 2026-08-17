@@ -21,6 +21,24 @@ public sealed class MemoryRetrievalService(
     /// <summary>每个查询词最终返回的最大条数。</summary>
     private const int DefaultTopN = 8;
 
+    /// <summary>负面清单一次最多提供的驳回条数，避免顶爆归纳模型的上下文。</summary>
+    private const int MaxRejectedRecognitions = 30;
+
+    /// <summary>读取用户已驳回的认识，供归纳模型作为禁止再次产出的负面清单。</summary>
+    public async Task<IReadOnlyList<RejectedRecognition>> GetRejectedRecognitionsAsync(
+        long userId,
+        CancellationToken cancellationToken = default) =>
+        (await db.Queryable<Recognition>()
+            .Where(item => item.UserId == userId && item.RejectedAt != null)
+            .OrderBy(item => item.RejectedAt, OrderByType.Desc)
+            .Take(MaxRejectedRecognitions)
+            .ToListAsync(cancellationToken))
+        .Select(item => new RejectedRecognition(item.Category, item.Content, item.RejectionNote))
+        .ToArray();
+
+    /// <summary>一条被用户否认的归纳。</summary>
+    public sealed record RejectedRecognition(string Category, string Content, string? Note);
+
     /// <summary>按查询词返回与现有工具完全一致的 JSON 结构。</summary>
     public async Task<string> SearchAsync(
         long userId,
@@ -201,7 +219,7 @@ public sealed class MemoryRetrievalService(
         ["recognition"] =
             """
             SELECT id FROM recognitions
-            WHERE user_id = @userId AND (
+            WHERE user_id = @userId AND rejected_at IS NULL AND (
                 category ILIKE @pattern
                 OR content ILIKE @pattern
                 OR EXISTS (SELECT 1 FROM unnest(keywords) k WHERE k ILIKE @pattern))
@@ -340,7 +358,7 @@ public sealed class MemoryRetrievalService(
                 case "recognition":
                 {
                     var recognitions = await db.Queryable<Recognition>()
-                        .Where(item => item.UserId == userId && ids.Contains(item.Id))
+                        .Where(item => item.UserId == userId && ids.Contains(item.Id) && item.RejectedAt == null)
                         .ToListAsync(cancellationToken);
                     foreach (var item in recognitions)
                     {

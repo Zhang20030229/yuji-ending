@@ -24,12 +24,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<!-- 内测期真机走局域网明文 HTTP（http://172.25.106.65:5237）。提交 App Store 审核的包必须删除 NSAppTransportSecurity 整段。 -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>选择相册中的照片，作为「一刻」记录与对话中的图片附件。</string>
 	<key>NSCameraUsageDescription</key>

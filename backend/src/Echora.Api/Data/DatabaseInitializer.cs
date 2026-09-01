@@ -28,6 +28,7 @@ public static class DatabaseInitializer
             typeof(EmotionRecord),
             typeof(CbtObservation),
             typeof(EmotionSummary),
+            typeof(DayDigest),
             typeof(UnresolvedMention),
             typeof(AnalysisRun),
             typeof(ReportPack),

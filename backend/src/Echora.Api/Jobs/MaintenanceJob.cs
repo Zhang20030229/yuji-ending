@@ -10,6 +10,7 @@ public sealed class MaintenanceJob(
     ISqlSugarClient db,
     IBackgroundJobClient jobs,
     EmotionSummaryService summaries,
+    DayDigestService digests,
     MemoryEmbeddingService embeddings,
     ILogger<MaintenanceJob> logger)
 {
@@ -29,6 +30,8 @@ public sealed class MaintenanceJob(
     {
         var recovered = await RecoverAnalysisRunsAsync(cancellationToken);
         await summaries.RepairMissingAsync(cancellationToken);
+        // 只补最近七天：历史日期的摘要缺失不影响使用，而每天一次调用需要有上限。
+        await digests.RepairRecentAsync(7, cancellationToken);
         var orphans = await embeddings.RemoveOrphansAsync(cancellationToken);
         logger.LogInformation(
             "Daily maintenance completed: RecoveredAnalysisCount {RecoveredAnalysisCount}, EmbeddingOrphansRemoved {EmbeddingOrphansRemoved}",

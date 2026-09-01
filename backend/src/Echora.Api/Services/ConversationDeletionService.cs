@@ -8,6 +8,7 @@ public sealed class ConversationDeletionService(
     ISqlSugarClient db,
     AttachmentService attachments,
     EmotionSummaryService emotionSummaries,
+    DayDigestService dayDigests,
     ILogger<ConversationDeletionService> logger)
 {
     /// <summary>读取二次确认需要展示的删除影响。</summary>
@@ -50,6 +51,12 @@ public sealed class ConversationDeletionService(
         var personRecords = await db.Queryable<PersonRecord>().Where(item => item.UserId == userId && item.ConversationId == conversationId).ToListAsync(cancellationToken);
         var placeRecords = await db.Queryable<PlaceRecord>().Where(item => item.UserId == userId && item.ConversationId == conversationId).ToListAsync(cancellationToken);
         var affectedDays = await emotionSummaries.GetConversationDaysAsync(userId, conversationId, cancellationToken);
+        // CBT 观察可能落在没有情绪记录的日期上，摘要失效范围要把它们一起算进来。
+        var observationDays = (await db.Queryable<CbtObservation>()
+                .Where(item => item.UserId == userId && item.ConversationId == conversationId)
+                .ToListAsync(cancellationToken))
+            .Select(item => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(item.OccurredAt, ShanghaiTimeZone).DateTime));
+        var digestDays = affectedDays.Concat(observationDays).Distinct().ToArray();
         var now = DateTimeOffset.UtcNow;
 
         db.Ado.BeginTran();
@@ -76,6 +83,8 @@ public sealed class ConversationDeletionService(
             await RemoveOrphanPlacesAsync(userId, placeRecords.Select(item => item.PlaceId).Distinct().ToArray(), cancellationToken);
             foreach (var day in affectedDays)
                 await emotionSummaries.RebuildAsync(userId, day, cancellationToken);
+            // 摘要由模型生成，无法在删除请求里同步重算；先删掉，下一次分析会按需重建。
+            await dayDigests.RemoveAsync(userId, digestDays, cancellationToken);
 
             if (!await db.Queryable<Conversation>()
                     .AnyAsync(item => item.UserId == userId
@@ -145,4 +154,7 @@ public sealed class ConversationDeletionService(
 
     /// <summary>删除前展示的业务影响。</summary>
     public sealed record DeletionImpact(long ConversationId, string Title, int MessageCount, int FragmentCount, int EventCount, int RecognitionCount, int EmotionCount, int PersonRecordCount, int PlaceRecordCount);
+
+    private static readonly TimeZoneInfo ShanghaiTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");
 }

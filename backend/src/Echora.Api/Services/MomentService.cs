@@ -11,6 +11,7 @@ public sealed class MomentService(
     ISqlSugarClient db,
     AttachmentService attachments,
     IBackgroundJobClient jobs,
+    DayDigestService dayDigests,
     ILogger<MomentService> logger)
 {
     /// <summary>发布原始一刻并分别入队 MomentAgent 和三分支分析。</summary>
@@ -181,6 +182,11 @@ public sealed class MomentService(
             db.Ado.RollbackTran();
             throw;
         }
+        // 摘要里可能引用了这条一刻的原话，先删掉，避免页面继续展示已删除的内容。
+        await dayDigests.RemoveAsync(
+            userId,
+            [DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(moment.PublishedAt, ShanghaiTimeZone).DateTime)],
+            cancellationToken);
         if (attachment is not null)
             await attachments.DeleteObjectsAsync(AttachmentService.GetObjectKeys(attachment));
         return true;
@@ -231,6 +237,9 @@ public sealed class MomentService(
                 .ExecuteCommandAsync(cancellationToken);
         }
     }
+
+    private static readonly TimeZoneInfo ShanghaiTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");
 
     private static MomentResponse ToResponse(Moment moment, Attachment attachment) => new(
         moment.Id,

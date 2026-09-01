@@ -30,6 +30,7 @@ public sealed class AccountCleanupJob(
             await db.Deleteable<ReportPack>().Where(item => item.UserId == userId).ExecuteCommandAsync();
             await db.Deleteable<UnresolvedMention>().Where(item => item.UserId == userId).ExecuteCommandAsync();
             await db.Deleteable<EmotionSummary>().Where(item => item.UserId == userId).ExecuteCommandAsync();
+            await db.Deleteable<DayDigest>().Where(item => item.UserId == userId).ExecuteCommandAsync();
             await db.Deleteable<CbtObservation>().Where(item => item.UserId == userId).ExecuteCommandAsync();
             await db.Deleteable<EmotionRecord>().Where(item => item.UserId == userId).ExecuteCommandAsync();
             await db.Deleteable<Recognition>().Where(item => item.UserId == userId).ExecuteCommandAsync();

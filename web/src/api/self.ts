@@ -49,14 +49,26 @@ export interface CbtObservation {
   sources: SelfQuote[];
 }
 
+/** 一条由模型按当日记录归纳、只读的关键洞察。 */
+export interface DayInsight {
+  situation: string;
+  appraisal?: string | null;
+  emotions: string[];
+  followUp?: string | null;
+  quotes: string[];
+  observationIds: number[];
+}
+
 /** 情绪日视图。 */
 export interface EmotionDay {
   date: string;
   summary?: string;
+  narrative?: string | null;
   conversationCount: number;
   sourceMessageCount: number;
   items: EmotionItem[];
   families: Array<{ family: string; momentCount: number; peakIntensity: number; subtypes: string[] }>;
+  insights: DayInsight[];
   cbtObservations: CbtObservation[];
 }
 
@@ -131,17 +143,6 @@ export function getEmotionMonth(month: string, signal?: AbortSignal) {
 /** 读取一年的情绪热力图。 */
 export function getEmotionYear(year: number, signal?: AbortSignal) {
   return apiJson<EmotionYear>(`/self/emotions/year?year=${encodeURIComponent(year)}`, { signal });
-}
-
-/** 修订 CBT 自我观察；原消息不会被修改。 */
-export async function updateCbtObservation(
-  id: number,
-  input: Omit<CbtObservation, "id" | "occurredAt" | "sources">,
-) {
-  await apiFetch(`/self/cbt-observations/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
 }
 
 /** 删除 CBT 自我观察；原消息和同源情绪不会被修改。 */

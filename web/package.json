@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:ios": "tsc -b && vite build --mode capacitor && cap sync ios",
+    "build:ios:local": "tsc -b && vite build --mode capacitor-local && cap sync ios",
     "build:ios:staging": "tsc -b && vite build --mode capacitor-staging && cap sync ios",
     "lint": "oxlint",
     "test": "node --test src/pages/companion/asset-route.test.ts src/pages/companion/conversation-session-state.test.ts src/api/map-data.test.ts",

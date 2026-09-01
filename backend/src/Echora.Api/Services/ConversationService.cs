@@ -65,6 +65,8 @@ public sealed class ConversationService(
                     .AnyAsync(cancellationToken))
                 throw new ArgumentException("引用的历史会话不存在。");
 
+            var now = DateTimeOffset.UtcNow;
+
             var current = await db.Queryable<Conversation>()
                 .Where(item => item.UserId == userId
                     && item.Channel == "Web"
@@ -73,11 +75,12 @@ public sealed class ConversationService(
                 .OrderBy(item => item.LastMessageAt, OrderByType.Desc)
                 .OrderBy(item => item.CreatedAt, OrderByType.Desc)
                 .FirstAsync(cancellationToken);
+            // 只有今天创建的空会话才能复用；跨天的空会话已经只读，复用会让用户点「继续聊」也拿不到可写会话。
             if (current is not null
+                && IsWritable(current, now)
                 && !await db.Queryable<ConversationMessage>().AnyAsync(item => item.ConversationId == current.Id, cancellationToken))
                 return ToSessionResponse(current);
 
-            var now = DateTimeOffset.UtcNow;
             db.Ado.BeginTran();
             try
             {
@@ -618,7 +621,8 @@ public sealed class ConversationService(
                 user,
                 history,
                 TextOnly: conversation.Channel == "IMessage",
-                ReferenceTime: userMessage.CreatedAt);
+                ReferenceTime: userMessage.CreatedAt,
+                SessionOpening: history.Count <= 1);
             var updates = agent.RunAsync(request, cancellationToken);
             await foreach (var update in updates)
             {

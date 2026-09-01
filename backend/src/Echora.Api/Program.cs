@@ -112,6 +112,7 @@ builder.Services.AddScoped<Echora.Api.Agents.EmotionReportAgent>();
 builder.Services.AddScoped<Echora.Api.Agents.RelationshipReportAgent>();
 builder.Services.AddScoped<Echora.Api.Agents.RecognitionReportAgent>();
 builder.Services.AddScoped<Echora.Api.Agents.ReportComposerAgent>();
+builder.Services.AddScoped<Echora.Api.Agents.DayDigestAgent>();
 builder.Services.AddScoped<Echora.Api.Workflows.AnalysisWorkflow>();
 builder.Services.AddScoped<Echora.Api.Workflows.HeartReportWorkflow>();
 builder.Services.AddScoped<Echora.Api.Services.AnalysisService>();
@@ -121,6 +122,7 @@ builder.Services.AddScoped<Echora.Api.Services.MemoryDigestRenderer>();
 builder.Services.AddScoped<Echora.Api.Services.ArchiveViewService>();
 builder.Services.AddScoped<Echora.Api.Services.SelfViewService>();
 builder.Services.AddScoped<Echora.Api.Services.EmotionSummaryService>();
+builder.Services.AddScoped<Echora.Api.Services.DayDigestService>();
 builder.Services.AddScoped<Echora.Api.Services.HeartReportContextService>();
 builder.Services.AddScoped<Echora.Api.Services.HeartReportService>();
 builder.Services.AddScoped<Echora.Api.Services.RunLogService>();
@@ -131,6 +133,7 @@ builder.Services.AddScoped<Echora.Api.Services.MomentService>();
 builder.Services.AddScoped<Echora.Api.Jobs.AnalysisJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.MomentJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.EmotionSummaryJob>();
+builder.Services.AddScoped<Echora.Api.Jobs.DayDigestJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.MaintenanceJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.MemoryEmbeddingJob>();
 builder.Services.AddScoped<Echora.Api.Jobs.HeartReportJob>();
@@ -329,8 +332,21 @@ var forwardedHeaders = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
 };
-// 只信任 Compose 内网段的反代，不放开任意来源，避免伪造 X-Forwarded-For 绕过按 IP 计数的登录限流。
-forwardedHeaders.KnownIPNetworks.Add(new System.Net.IPNetwork(IPAddress.Parse("172.16.0.0"), 12));
+// 只信任已知网段的反代，不放开任意来源，避免伪造 X-Forwarded-For 绕过按 IP 计数的登录限流。
+// 网段随部署形态变化：Compose 走 172.16/12，托管平台（Render 等）另有内网段，故改为配置驱动。
+foreach (var cidr in config.GetSection("Proxy:KnownNetworks").Get<string[]>() is { Length: > 0 } configured
+    ? configured
+    : ["172.16.0.0/12"])
+{
+    var separator = cidr.IndexOf('/');
+    if (separator <= 0)
+    {
+        throw new InvalidOperationException($"Proxy:KnownNetworks 需为 CIDR 形式，实际为 {cidr}。");
+    }
+    forwardedHeaders.KnownIPNetworks.Add(new System.Net.IPNetwork(
+        IPAddress.Parse(cidr[..separator]),
+        int.Parse(cidr[(separator + 1)..])));
+}
 app.UseForwardedHeaders(forwardedHeaders);
 app.UseResponseCompression();
 app.UseExceptionHandler();

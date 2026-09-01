@@ -57,6 +57,17 @@ public sealed class AnalysisJob(
                         var day = DateOnly.FromDateTime(input.OccurredAt.LocalDateTime);
                         jobs.Enqueue<EmotionSummaryJob>(job =>
                             job.ExecuteAsync(run.UserId, day, CancellationToken.None));
+                        try
+                        {
+                            // 延迟入队把一段连续对话合并成一次摘要生成；入队失败不影响分析结果。
+                            jobs.Schedule<DayDigestJob>(
+                                job => job.ExecuteAsync(run.UserId, day, CancellationToken.None),
+                                TimeSpan.FromMinutes(2));
+                        }
+                        catch (Exception exception)
+                        {
+                            logger.LogWarning(exception, "Day digest enqueue failed: UserId {UserId}, Day {Day}", run.UserId, day);
+                        }
                     }
                 }
                 catch (Exception exception)

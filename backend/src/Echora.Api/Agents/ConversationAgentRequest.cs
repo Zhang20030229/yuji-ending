@@ -8,4 +8,5 @@ public sealed record ConversationAgentRequest(
     UserAccount User,
     IReadOnlyList<ChatMessage> Messages,
     bool TextOnly = false,
-    DateTimeOffset? ReferenceTime = null);
+    DateTimeOffset? ReferenceTime = null,
+    bool SessionOpening = false);

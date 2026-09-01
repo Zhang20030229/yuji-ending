@@ -138,9 +138,13 @@ public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor acc
         var summary = await db.Queryable<EmotionSummary>()
             .Where(item => item.UserId == UserId && item.PeriodType == "Day" && item.PeriodStart == date)
             .FirstAsync(cancellationToken);
+        var digest = await db.Queryable<DayDigest>()
+            .Where(item => item.UserId == UserId && item.Date == date)
+            .FirstAsync(cancellationToken);
         return new EmotionDay(
             date,
             summary?.Summary,
+            string.IsNullOrWhiteSpace(digest?.Narrative) ? null : digest.Narrative,
             records.Select(item => item.Record.ConversationId).Where(id => id.HasValue).Distinct().Count(),
             records.Select(item => (item.Record.SourceMessageId, item.Record.SourceMomentId))
                 .Concat(observations.Select(item => (item.SourceMessageId, item.SourceMomentId)))
@@ -148,8 +152,25 @@ public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor acc
                 .Count(),
             items,
             families,
+            ParseInsights(digest),
             observations.Select(item => ToCbtObservation(item, quotes)).ToArray());
     }
+
+    /// <summary>读取已生成的关键洞察；缺失或解析失败时返回空列表，由页面回退到原始观察。</summary>
+    private static IReadOnlyList<DayInsightItem> ParseInsights(DayDigest? digest)
+    {
+        if (string.IsNullOrWhiteSpace(digest?.InsightsJson)) return [];
+        try
+        {
+            return JsonSerializer.Deserialize<DayInsightItem[]>(digest.InsightsJson, InsightJsonOptions) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static readonly JsonSerializerOptions InsightJsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>读取一个月的情绪日历、趋势和代表原话。</summary>
     public async Task<EmotionMonth> GetEmotionMonthAsync(DateOnly month, CancellationToken cancellationToken)
@@ -373,7 +394,8 @@ public sealed class SelfViewService(ISqlSugarClient db, IHttpContextAccessor acc
 
     public sealed record RecognitionItem(long Id, string Category, string Content, IReadOnlyList<string> Keywords, long ConversationId, string ConversationTitle, DateTimeOffset UpdatedAt, IReadOnlyList<Quote> Sources, DateTimeOffset? RejectedAt, string? RejectionNote);
     public sealed record Quote(long MessageId, string SourceType, string Text, DateTimeOffset CreatedAt, string? LocationName, string? LocationAddress);
-    public sealed record EmotionDay(DateOnly Date, string? Summary, int ConversationCount, int SourceMessageCount, IReadOnlyList<EmotionItem> Items, IReadOnlyList<FamilyDayStat> Families, IReadOnlyList<CbtObservationItem> CbtObservations);
+    public sealed record EmotionDay(DateOnly Date, string? Summary, string? Narrative, int ConversationCount, int SourceMessageCount, IReadOnlyList<EmotionItem> Items, IReadOnlyList<FamilyDayStat> Families, IReadOnlyList<DayInsightItem> Insights, IReadOnlyList<CbtObservationItem> CbtObservations);
+    public sealed record DayInsightItem(string Situation, string? Appraisal, IReadOnlyList<string> Emotions, string? FollowUp, IReadOnlyList<string> Quotes, IReadOnlyList<long> ObservationIds);
     public sealed record EmotionItem(long Id, string Family, string Subtype, short Intensity, string Summary, DateTimeOffset OccurredAt, long ConversationId, string ConversationTitle, IReadOnlyList<Quote> Sources);
     public sealed record FamilyDayStat(string Family, int MomentCount, short PeakIntensity, IReadOnlyList<string> Subtypes);
     public sealed record EmotionMonth(DateOnly Month, string? Summary, IReadOnlyList<EmotionCalendarDay> Days, IReadOnlyList<FamilyMonthStat> Families, IReadOnlyList<RepresentativeQuote> RepresentativeQuotes, int CbtObservationCount, int CbtCoveredDays);

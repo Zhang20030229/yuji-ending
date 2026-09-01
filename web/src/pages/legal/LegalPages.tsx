@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
-/** 上架材料需要真实可联系的地址，发布前必须替换。 */
-const CONTACT_EMAIL = "TODO_替换为真实联系邮箱";
+/** 上架材料需要真实可联系的地址。 */
+const CONTACT_EMAIL = "1023884518@qq.com";
 
 /** 心理健康类应用的免责与求助资源，隐私政策、条款与设置页共用同一份文案。 */
 export function SafetyNotice() {

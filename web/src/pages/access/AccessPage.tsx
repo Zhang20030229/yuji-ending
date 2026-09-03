@@ -96,10 +96,6 @@ function LoginForm({ onRegister, onProfile, onDone, error, setError }: {
       <PasswordField id="login-password" value={password} setValue={setPassword} visible={visible} setVisible={setVisible} autoComplete="current-password" />
     </div>
     <AccessError message={error} />
-    <aside className="mt-6 rounded-xl border border-border/70 bg-secondary/45 px-4 py-3" aria-label="演示账号">
-      <p className="text-xs text-muted-foreground">演示账号</p>
-      <p className="mt-1 text-sm font-medium text-foreground">账号：demo　密码：888888</p>
-    </aside>
     <Button disabled={busy} className={`mt-4 ${actionClass}`}>{busy ? "正在登录…" : <>登录<IconArrowRight /></>}</Button>
     <button type="button" onClick={onRegister} className="mt-5 min-h-11 w-full text-sm text-muted-foreground hover:text-foreground">没有账号？创建账号</button>
   </form>;

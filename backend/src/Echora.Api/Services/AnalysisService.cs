@@ -307,6 +307,10 @@ public sealed class AnalysisService(
             {
                 var itemAttachments = SelectAttachments(item.ImageIndexes);
                 var coordinate = FirstCoordinate(itemAttachments, attachmentById);
+                // 兜底：AI 未关联图片或关联的图片无坐标时，用本次来源中任意带坐标的附件，
+                // 避免地点因 AI 漏关联而落不到地图上。
+                if (coordinate.Latitude is null)
+                    coordinate = FirstCoordinate(input.AttachmentIds, attachmentById);
                 var id = await ResolvePlaceAsync(
                     item,
                     run,

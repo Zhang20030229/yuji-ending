@@ -105,12 +105,28 @@ export function getConversationDeletionImpact(id: string) {
   return apiJson<ConversationDeletionImpact>(`/conversation/sessions/${id}/deletion-impact`);
 }
 
+/** 发送消息时可选携带的设备位置；照片无 EXIF GPS 时作为兜底，让地点能落到地图上。 */
+export interface MessageLocation {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+}
+
 /** 原文先可靠落库；服务端随后使用保存的完整会话历史调用 Agent。 */
-export function captureSessionTurn(sessionId: string, text: string, assetIds: string[] = []) {
+export function captureSessionTurn(
+  sessionId: string,
+  text: string,
+  assetIds: string[] = [],
+  location?: MessageLocation | null,
+) {
   return apiJson<TurnReceipt>(`/conversation/sessions/${sessionId}/turns`, {
     method: "POST",
     headers: { "Idempotency-Key": createId() },
-    body: JSON.stringify({ text: text || undefined, assetIds }),
+    body: JSON.stringify({
+      text: text || undefined,
+      assetIds,
+      ...(location ? { latitude: location.latitude, longitude: location.longitude, accuracyMeters: location.accuracyMeters } : {}),
+    }),
   });
 }
 

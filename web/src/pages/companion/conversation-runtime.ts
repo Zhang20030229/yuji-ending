@@ -12,6 +12,7 @@ import {
   type ConversationPart,
   type ConversationTurn,
   type ConversationTurnPage,
+  type MessageLocation,
 } from "@/api/conversation";
 import { readAssetIdFromContentUrl } from "./asset-route";
 import { apiUrl } from "@/api/base-url";
@@ -111,7 +112,9 @@ async function runPersistedTurn(
   const input = JSON.parse(request.body) as RunAgentInput;
   const ownerInput = getLatestOwnerInput(input);
   if (!ownerInput.text && ownerInput.assetIds.length === 0) throw new Error("消息内容不能为空。");
-  const receipt = await captureSessionTurn(sessionId, ownerInput.text, ownerInput.assetIds);
+  // 带图片时尝试获取设备 GPS 作为消息位置兜底；纯文字消息不需要。
+  const location = ownerInput.assetIds.length > 0 ? await tryGetDeviceLocation() : null;
+  const receipt = await captureSessionTurn(sessionId, ownerInput.text, ownerInput.assetIds, location);
   const sourceTurnId = receipt.turnId;
   const encoder = new TextEncoder();
   const messageId = createId();
@@ -291,4 +294,19 @@ function toAttachment(part: ConversationPart) {
     status: { type: "complete" as const },
     content: [{ type: "image" as const, image: part.contentUrl, filename: "图片" }],
   }];
+}
+
+/** 尝试获取设备 GPS；5 秒内未拿到或被拒绝则返回 null，不阻断发送。 */
+async function tryGetDeviceLocation(): Promise<MessageLocation | null> {
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) return null;
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (value: MessageLocation | null) => { if (!settled) { settled = true; resolve(value); } };
+    setTimeout(() => done(null), 5000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => done({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracyMeters: pos.coords.accuracy }),
+      () => done(null),
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60_000 },
+    );
+  });
 }

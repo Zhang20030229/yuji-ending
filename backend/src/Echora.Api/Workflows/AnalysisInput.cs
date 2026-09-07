@@ -25,4 +25,10 @@ public sealed record AnalysisInput(
 
     /// <summary>当前用户亲自输入的原文；不包含图片说明、设备位置或历史上下文。</summary>
     public string ExplicitText { get; init; } = string.Empty;
+
+    /// <summary>来源消息或一刻的设备位置纬度；附件 EXIF 无坐标时作为兜底，让地点仍能落到地图上。</summary>
+    public double? SourceLatitude { get; init; }
+
+    /// <summary>来源消息或一刻的设备位置经度。</summary>
+    public double? SourceLongitude { get; init; }
 }

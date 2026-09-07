@@ -140,6 +140,8 @@ public sealed class AnalysisService(
             branches)
         {
             ExplicitText = explicitText,
+            SourceLatitude = target.Latitude,
+            SourceLongitude = target.Longitude,
         };
     }
 
@@ -191,6 +193,8 @@ public sealed class AnalysisService(
         {
             HasExplicitText = !string.IsNullOrWhiteSpace(moment.Text),
             ExplicitText = moment.Text?.Trim() ?? string.Empty,
+            SourceLatitude = moment.Latitude,
+            SourceLongitude = moment.Longitude,
         };
     }
 
@@ -311,6 +315,9 @@ public sealed class AnalysisService(
                 // 避免地点因 AI 漏关联而落不到地图上。
                 if (coordinate.Latitude is null)
                     coordinate = FirstCoordinate(input.AttachmentIds, attachmentById);
+                // 兜底 2：附件均无坐标时，用消息或一刻本身的设备位置（前端随消息发送的 GPS）。
+                if (coordinate.Latitude is null && input.SourceLatitude is not null)
+                    coordinate = (input.SourceLatitude, input.SourceLongitude);
                 var id = await ResolvePlaceAsync(
                     item,
                     run,

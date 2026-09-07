@@ -81,6 +81,9 @@ public sealed class StructuredAgentRunner(
         if (string.IsNullOrWhiteSpace(raw))
             throw new InvalidDataException("模型没有返回最终 JSON 内容。");
 
+        // 模型有时用 markdown 代码围栏（```json ... ```）包裹 JSON，剥离后再返回，避免反序列化失败。
+        raw = StripMarkdownFence(raw);
+
         // 仅允许在隔离诊断环境查看原始输出，普通日志不记录用户正文。
         if (bool.TryParse(configuration["AI:DiagnosticRawOutput"], out var enabled) && enabled)
             logger.LogWarning("Subagent raw diagnostic: Agent {Agent}, Raw {Raw}", name, raw);
@@ -92,5 +95,17 @@ public sealed class StructuredAgentRunner(
             raw.Length,
             System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds);
         return raw;
+    }
+
+    /// <summary>剥离模型输出可能包裹的 markdown 代码围栏（```json ... ``` 或 ``` ... ```）。</summary>
+    private static string StripMarkdownFence(string raw)
+    {
+        var text = raw.Trim();
+        if (!text.StartsWith("```")) return text;
+        var firstNewline = text.IndexOf('\n');
+        if (firstNewline < 0) return text;
+        text = text[(firstNewline + 1)..].Trim();
+        if (text.EndsWith("```")) text = text[..^3].Trim();
+        return text;
     }
 }

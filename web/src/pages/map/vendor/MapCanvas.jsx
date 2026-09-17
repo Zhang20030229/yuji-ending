@@ -35,7 +35,7 @@ export const NEARBY_EVENT_RADIUS_KM = 8;
 export const MAP_CAMERA = {
   ...FALLBACK_LOCATION,
   zoom: 12.5,
-  pitch: 42,
+  pitch: 0,
   bearing: 0,
 };
 
@@ -556,7 +556,7 @@ function focusEvents(map, events, fallbackLocation) {
     map.jumpTo({
       center: [events[0].longitude, events[0].latitude],
       zoom: 13.5,
-      pitch: 32,
+      pitch: 0,
       bearing: 0,
     });
     return;
@@ -677,7 +677,6 @@ export function MapCanvas({
     const restoreStyleCustomizations = () => {
       if (!mapInstance.isStyleLoaded()) return;
       applyMapCompliance(mapInstance, languageRef.current);
-      add3DBuildings({ target: mapInstance });
     };
 
     mapInstance.on("style.load", restoreStyleCustomizations);
@@ -765,7 +764,6 @@ export function MapCanvas({
         onLoad={(event) => {
           setMapInstance(event.target);
           applyMapCompliance(event.target, language);
-          add3DBuildings(event);
           if (focusLocation) focusEvents(event.target, allEvents, focusLocation);
           else fitNearbyEvents(event.target, allEvents, currentLocation);
           window.requestAnimationFrame(() => {
